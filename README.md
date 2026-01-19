@@ -3,7 +3,8 @@
 ## Overview
 This project demonstrates the design and implementation of a secure hybrid cloud
 environment for a fictional organization using Microsoft Azure, Microsoft 365,
-Active Directory Domain Services, and Azure Entra ID.
+Active Directory Domain Services, and Azure Entra ID. 
+**If you notice some folders are empty, it is because I am currently in the proccess of updating this repo with the project frles from my local machine.
 
 ## Key Objectives
 - Integrate on-prem Active Directory with Azure Entra ID
