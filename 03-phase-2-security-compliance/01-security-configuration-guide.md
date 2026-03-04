@@ -35,7 +35,7 @@ Safe Links provides real-time protection against malicious URLs by detonating li
    - **Settings**:
      - Enable "On: Safe Links checks a list of suspicious links..."
      - Enable "Warn on potentially unsafe links"
-     - Enable "Don't rewrite URLsp, do checks via API"
+     - Enable "Don't rewrite URLs, do checks via API"
    - Click **Save**
 
 **PowerShell Configuration:**
