@@ -26,10 +26,3 @@
 ✓ Security Score > 60% (M365)  
 ✓ Zero unplanned downtime  
 ✓ <1 hour RTO for critical services  
-
-## Resource Requirements
-
-- **IT/Project Team**: 3 FTE (full-time equiv)
-- **Cloud Architect**: 1 FTE (weeks 5-7)
-- **Security Engineer**: 1 FTE (weeks 2-4, 8-10)
-- **User Support**: 2 FTE (weeks 1-4, 8-22)
