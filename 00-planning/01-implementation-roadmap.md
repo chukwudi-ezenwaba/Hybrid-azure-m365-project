@@ -2,22 +2,21 @@
 
 ## Critical Path Dependencies
 
-```
-Phase 1 (M365) → Phase 5 (Hybrid) ┐
-Phase 2 (Security) → Phase 3 (Teams) → Phase 4 (Monitor) → Phase 8-10
-Phase 5 (Identity) → Phase 6 (HA) → Phase 7 (Azure) → Phase 8
-Phase 8-10 → Phase 11 (Intune)
-```
+* Phase 1 (M365) → Phase 5 (Hybrid) ┐
+* Phase 2 (Security) → Phase 3 (Teams) → Phase 4 (Monitor) → Phase 8-10
+* Phase 5 (Identity) → Phase 6 (HA) → Phase 7 (Azure) → Phase 8
+* Phase 8-10 → Phase 11 (Intune)
+
 
 ## Key Milestones
 
-- **Week 2** - Users can login to M365, email working
-- **Week 4** - Security baseline active, threats detected
-- **Week 8** - Monitoring dashboards showing data
-- **Week 10** - Hybrid identity functional (on-prem SSO)
-- **Week 14** - Azure infrastructure + backup operational
-- **Week 16** - File services migrated to cloud
-- **Week 22** - Devices managed, go-live complete
+- Users can login to M365, email working
+- Security baseline active, threats detected
+- Monitoring dashboards showing data
+- Hybrid identity functional (on-prem SSO)
+- Azure infrastructure + backup operational
+- File services migrated to cloud
+- Devices managed, go-live complete
 
 ## Success Metrics
 
