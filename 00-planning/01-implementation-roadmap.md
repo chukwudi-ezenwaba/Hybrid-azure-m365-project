@@ -1,23 +1,5 @@
 # Implementation Roadmap: Hybrid-Azure-m365 Project
 
-22-Week Enterprise Deployment Timeline
-
-## High-Level Timeline
-
-| Phase | Weeks | Focus | Status |
-|-------|-------|-------|--------|
-| 1 | 1-2 | M365 Tenant + Users | Foundation |
-| 2 | 3-4 | Security Hardening | Protection |
-| 3 | 5-6 | Teams Collaboration | Enablement |
-| 4 | 7-8 | Monitoring + Compliance | Operations |
-| 5 | 9-10 | Hybrid Identity (AAD Connect) | Integration |
-| 6 | 11-12 | High Availability | Resilience |
-| 7 | 13-14 | Azure Infrastructure | Infrastructure |
-| 8 | 15-16 | Workload Migration | Data Move |
-| 9 | 17-18 | File Services + Access | Permissions |
-| 10 | 19-20 | RBAC Implementation | Access Control |
-| 11 | 21-22 | Intune Endpoint Management | Compliance |
-
 ## Critical Path Dependencies
 
 ```
