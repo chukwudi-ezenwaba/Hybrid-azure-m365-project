@@ -22,7 +22,7 @@ On-Premises AD ←→ Azure AD Connect ←→ Azure Entra ID ←→ Microsoft 36
 
 ## The 11 Phase
 
-| Phase | Focus | Start When |
+| Phase | Focus | 
 |-------|-------|-------|-----------|
 | **1** | M365 tenant, users, licenses |
 | **2** | Security policies, Defender, DLP |
