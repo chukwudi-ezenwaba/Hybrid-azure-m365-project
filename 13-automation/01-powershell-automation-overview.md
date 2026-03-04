@@ -1,294 +1,196 @@
-# PowerShell Automation Scripts - User Management and Bulk Operations
+# Hybrid-Azure-m365 Project: Automation Suite
 
-## Overview
+## Project Context
 
-This directory contains PowerShell scripts for automating common hybrid infrastructure tasks including bulk user creation, license management, group operations, and reporting.
+This automation suite supports the **Hybrid-Azure-m365 Deployment Project**, automating the deployment of Microsoft 365 tenant, license assignment, user/group management, and ongoing operations following Phase 1-11 implementation phases.
 
----
-
-## Prerequisites
-
-Install required modules:
-
-```powershell
-# Install Microsoft 365 PowerShell modules
-Install-Module -Name MSOnline
-Install-Module -Name AzureAD
-Install-Module -Name ExchangeOnlineManagement
-Install-Module -Name Microsoft.Teams.PowerShell
-Install-Module -Name ActiveDirectory  # On domain controller or RSAT-installed machine
-```
+**Project Scope**: Enterprise hybrid environment with on-premises AD bridging to Azure/Microsoft 365
 
 ---
 
-## Script 1: Bulk User Creation from CSV
+## Execution Workflow
 
-**File**: `create-users.ps1`
-
-Creates users in both on-premises Active Directory and Microsoft 365 from CSV file.
-
-**Usage**:
+### Phase 1: Setup & Connection
 ```powershell
-.\create-users.ps1 -CsvPath "C:\Users\users-to-create.csv" -ADCredential (Get-Credential)
+cd powershell
+.\01-connect-services.ps1
 ```
+**Output**: Connected to Graph, Exchange, Teams (shows org name)
 
-**CSV Format Required**:
-```csv
-FirstName,LastName,Email,Department,JobTitle
-John,Smith,john.smith@organization.onmicrosoft.com,IT,Senior Architect
-Jane,Doe,jane.doe@organization.onmicrosoft.com,HR,HR Manager
+### Phase 2: User Provisioning
+```powershell
+.\02-create-users.ps1 -CsvPath "users.csv"
 ```
+**Input**: CSV with FirstName, LastName, Email, JobTitle, Department
+**Output**: `created-users-[timestamp].csv` with new user IDs
 
-**What it does**:
-1. Reads CSV file
-2. For each user:
-   - Creates user in on-premises AD (if connected to domain controller)
-   - Waits for Azure AD Connect to sync (typically 2-3 minutes)
-   - Assigns Microsoft 365 E5 license
-   - Adds to department group
-   - Generates temporary password and sends welcome email
-3. Reports completion status
+### Phase 3: License Deployment
+```powershell
+# Preview
+.\03-license-assignment.ps1 -CsvPath "licenses.csv"
+
+# Execute
+.\03-license-assignment.ps1 -CsvPath "licenses.csv" -Apply
+```
+**Input**: CSV with UserPrincipalName, SkuId (ENTERPRISEPACK/ENTERPRISEPREMIUM)
+**Output**: License assignment summary
+
+### Phase 4: Infrastructure Setup
+```powershell
+.\04-mailbox-setup.ps1 -CreateSharedMailbox -SharedMailboxEmail "support@org.com"
+.\07-create-groups.ps1 -CsvPath "groups.csv"
+.\08-enable-mfa.ps1 -UserEmail "*"
+```
+**Outcomes**: Shared mailboxes configured, groups created, MFA policy enabled
+
+### Phase 5: Operations & Monitoring
+```powershell
+.\05-generate-reports.ps1 -OutputPath ".\reports"
+.\06-cleanup-disabled-users.ps1 -DaysAfterDisable 30 -Apply
+```
+**Outputs**: User reports, license utilization, disabled account cleanup
 
 ---
 
-## Script 2: License Assignment Automation
+## Scripts Summary
 
-**File**: `license-assignment.ps1`
-
-Assigns Microsoft 365 licenses based on department or title.
-
-**Usage**:
-```powershell
-.\license-assignment.ps1 -Department "IT" -LicenseType "E5"
-```
-
-**Script Logic**:
-```powershell
-# Find users in IT department without E5 license
-$unlicensedUsers = Get-MsolUser -All | Where-Object { `
-    $_.Department -eq "IT" -and $_.IsLicensed -eq $false
-}
-
-# Assign E5 license
-foreach ($user in $unlicensedUsers) {
-    Set-MsolUserLicense -UserPrincipalName $user.UserPrincipalName `
-                        -AddLicenses "organization:ENTERPRISEPREMIUM"
-    Write-Host "License assigned to $($user.DisplayName)"
-}
-```
-
-**Features**:
-- Batch assign licenses by department
-- Verify license count before assignment
-- Generate pre-assignment report
-- Log all operations for audit trail
+| # | Script | Purpose | Input | When to Run |
+|---|--------|---------|-------|------------|
+| 00 | master-orchestration | Menu/reference | - | Documentation |
+| 01 | connect-services | Authenticate to M365 | Admin account | First, always |
+| 02 | create-users | Bulk user creation | users.csv | After tenant setup |
+| 03 | license-assignment | Assign E3/E5 licenses | licenses.csv | After users created |
+| 04 | mailbox-setup | Configure Exchange | Email domain | After users provisioned |
+| 05 | generate-reports | Export user/license data | - | Weekly/monthly |
+| 06 | cleanup-disabled-users | Remove disabled accounts | - | Monthly maintenance |
+| 07 | create-groups | Create distribution lists | groups.csv | During org setup |
+| 08 | enable-mfa | Configure MFA policy | User email or * | Before production |
 
 ---
 
-## Script 3: User Report Generation
+## CSV Specifications
 
-**File**: `add-user-report.ps1`
-
-Generates detailed user activity and licensing report.
-
-**Usage**:
-```powershell
-.\add-user-report.ps1 -OutputPath "C:\Reports\user-report.xlsx"
+### users.csv (for script 02)
 ```
+FirstName,LastName,Email,JobTitle,Department
+John,Smith,j.smith,Senior Developer,Engineering
+Sarah,Johnson,s.johnson,Product Manager,Product
+```
+Email → `[email]@organization.onmicrosoft.com` | Password auto-generated | Account enabled immediately
 
-**Report Includes**:
-| Column | Information |
-|--------|-------------|
-| DisplayName | User full name |
-| Email (UPN) | user@organization.onmicrosoft.com |
-| Department | User department |
-| License Type | E3, E5, or unlicensed |
-| Last Login (M365) | Last access to cloud services |
-| Last Sync (AD) | Last Azure AD Connect sync time |
-| MFA Enabled | Yes/No |
-| Compliance Status | Compliant/Non-compliant device status |
-| Account Status | Active/Disabled/Deleted |
+### licenses.csv (for script 03)
+```
+UserPrincipalName,SkuId
+j.smith@organization.onmicrosoft.com,ENTERPRISEPACK
+s.johnson@organization.onmicrosoft.com,ENTERPRISEPREMIUM
+```
+SKU options: ENTERPRISEPACK (E3) | ENTERPRISEPREMIUM (E5)
+
+### groups.csv (for script 07)
+```
+DisplayName,Email,Description,Type,Members
+Engineering,engineering@org.com,Engineering team,M365Group,j.smith@org.com;s.johnson@org.com
+IT Support,itsupport@org.com,Support team,DistributionList,
+```
+Types: M365Group (modern, Teams-enabled) or DistributionList (traditional)
 
 ---
 
-## Script 4: Disabled User Cleanup
+## Setup
 
-**File**: `cleanup-disabled-users.ps1`
+### Prerequisites
+- PowerShell 5.1+ (Windows 10+) or PowerShell 7+ (any OS)
+- Global Administrator account with MFA device
+- Permissions: User.ReadWrite.All, Group.ReadWrite.All, Organization.Read.All
 
-Safely removes disabled users from cloud and on-premises directories after retention period.
-
-**Usage**:
+### First Run
 ```powershell
-.\cleanup-disabled-users.ps1 -DisabledDays 90 -WhatIf
-```
-
-**Parameters**:
-- `-DisabledDays`: Days since disabled before removal (default 90)
-- `-WhatIf`: Preview changes without applying (RECOMMENDED for first run)
-- `-Confirm`: Requires confirmation before each deletion
-
-**What it does**:
-1. Finds users disabled 90+ days ago
-2. Removes from M365 groups
-3. Revokes all token refresh (forces sign-out)
-4. Moves to disabled users OU in AD (soft delete before hard delete)
-5. After 30 days in disabled OU, permanently deletes account
-6. Generates audit report of all deletions
-
-**Safety Features**:
-- `-WhatIf` preview mode
-- Requires manual approval for each deletion
-- Auditing all changes
-- Soft delete with recovery window
-
----
-
-## Common Automation Patterns
-
-### Pattern 1: Connect to All Services
-
-```powershell
-# Establish connections to Microsoft 365 services
-Connect-MsolService                                    # MSOnline
-Connect-AzureAD                                        # Azure AD
-Connect-ExchangeOnline -UserPrincipalName admin@org   # Exchange Online
-Connect-MicrosoftTeams                                 # Teams
-Connect-IPPSSession -UserPrincipalName admin@org      # Security & Compliance
-```
-
-### Pattern 2: Batch Operations with Error Handling
-
-```powershell
-# Safely process multiple users with try-catch
-$users = Get-MsolUser -All
-
-foreach ($user in $users) {
-    try {
-        # Operation
-        Set-MsolUserLicense -UserPrincipalName $user.UserPrincipalName `
-                           -AddLicenses "organization:ENTERPRISEPREMIUM" `
-                           -ErrorAction Stop
-        Write-Host "SUCCESS: License assigned to $($user.DisplayName)"
-    }
-    catch {
-        Write-Host "ERROR: Failed to license $($user.DisplayName): $_"
-        # Log error and continue
-    }
-}
-```
-
-### Pattern 3: Scheduled Tasks via Windows Task Scheduler
-
-```powershell
-# Create scheduled task for daily license reconciliation
-
-$action = New-ScheduledTaskAction -Execute "powershell.exe" `
-                                 -Argument "-File C:\scripts\license-assignment.ps1"
-
-$trigger = New-ScheduledTaskTrigger -Daily -At 2:00AM
-
-Register-ScheduledTask -Action $action `
-                      -Trigger $trigger `
-                      -TaskName "Daily License Sync" `
-                      -Description "Sync and assign licenses daily" `
-                      -User "DOMAIN\ServiceAccount"
+Install-Module -Name Microsoft.Graph, ExchangeOnlineManagement, MicrosoftTeams
+.\01-connect-services.ps1
+Copy-Item SAMPLE-users.csv users.csv
+# Edit users.csv with your data
 ```
 
 ---
 
-## Best Practices for Automation
+## Script Capabilities
 
-1. **Always use -WhatIf first**: Test changes before applying
-2. **Implement logging**: Log all automation actions for audit trails
-3. **Error handling**: Use try-catch blocks to gracefully handle failures
-4. **Service account**: Run scripts with dedicated service account, not admin account
-5. **Notification**: Email results to responsible party after automation completes
-6. **Scheduling**: Run non-critical automation during business hours initially (9-5), then off-hours after testing
-7. **Monitoring**: Set up alerts if automation fails unexpectedly
-8. **Documentation**: Document every script's purpose, parameters, and prerequisites
-
----
-
-## Troubleshooting Automation
-
-**Issue**: PowerShell execution policy blocks scripts
-```powershell
-# Set execution policy (do this with caution)
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-**Issue**: Connectivity timeout to Microsoft 365
-```powershell
-# Increase timeout threshold
-$PSDefaultParameterValues['*:OperationTimeout'] = 3600000  # 1 hour
-```
-
-**Issue**: Batch operation skips silently
-```powershell
-# Enable verbose output
-$VerbosePreference = "Continue"
-$DebugPreference = "Continue"
-```
+| Script | Function | Safety Feature | Duration |
+|--------|----------|-----------------|----------|
+| 01 | Connect to services | - | 2-5 min (MFA) |
+| 02 | Create users | Exports created user IDs | 1-2 min per user |
+| 03 | Assign licenses | Preview mode (default), requires -Apply | 30 sec per license |
+| 04 | Setup mailboxes | Creates shared mailboxes, applies policies | 1-2 min |
+| 05 | Generate reports | CSV export with user/license data | 2-5 min |
+| 06 | Cleanup deleted users | PREVIEW mode (default), requires -Apply, grace period | 1-2 min |
+| 07 | Create groups | M365 or Distribution List | 1 min per group |
+| 08 | Enable MFA | Conditional Access policy (report-only initially) | 1 min |
 
 ---
 
-## Script Templates for Custom Automation
+## Error Troubleshooting
 
-### Template 1: Bulk Group Membership
-
-```powershell
-# Add multiple users to group
-$groupId = (Get-AzureADGroup -Filter "DisplayName eq 'IT Department'").ObjectId
-$userList = @("user1@org.onmicrosoft.com", "user2@org.onmicrosoft.com")
-
-foreach ($user in $userList) {
-    $userId = (Get-AzureADUser -Filter "userPrincipalName eq '$user'").ObjectId
-    Add-AzureADGroupMember -ObjectId $groupId -RefObjectId $userId
-}
-```
-
-### Template 2: Conditional Bulk Operations
-
-```powershell
-# Apply policy based on department
-$users = Get-MsolUser -All | Where-Object { $_.Department -eq "Finance" }
-
-foreach ($user in $users) {
-    # Apply finance-specific policy
-    Set-MsolUserPassword -UserPrincipalName $user.UserPrincipalName `
-                        -NewPassword "FinanceTemp2024!@#"
-    Write-Host "Password reset for $($user.DisplayName)"
-}
-```
+| Error | Cause | Solution |
+|-------|-------|----------|
+| Module not found | Not installed | `Install-Module -Name [module]` |
+| Permission denied | Not Global Admin | Use Global Admin account |
+| CSV not found | Path incorrect | Use full path: `C:\path\file.csv` |
+| User not found | UPN doesn't exist | Run script 02 first |
+| License unavailable | Insufficient stock | Check M365 admin center |
+| Already licensed | Duplicate | Script skips, try different SKU |
 
 ---
 
-## Documentation Template
+## Project Timeline
 
-When creating new scripts:
+| Week | Phase | Action | Script |
+|------|-------|--------|--------|
+| 1 | Setup | Connect to services | 01 |
+| 1-2 | User provisioning | Create users | 02 |
+| 2 | Licensing | Preview licenses | 03 |
+| 2-3 | Licensing | Apply licenses | 03 -Apply |
+| 3 | Infrastructure | Setup mailboxes | 04 |
+| 3 | Organization | Create groups | 07 |
+| 3-4 | Security | Enable MFA | 08 |
+| 4+ | Ops (weekly) | Generate reports | 05 |
+| 4+ | Maintenance (monthly) | Cleanup disabled | 06 |
+
+---
+
+## Sample Execution
 
 ```powershell
-<#
-.SYNOPSIS
-Brief description of script purpose
+PS C:\hybrid-azure-project\13-automation\powershell>
 
-.DESCRIPTION
-Detailed explanation of what the script does
+.\01-connect-services.ps1
+# ✓ Connected to Graph, Exchange, Teams (org: Company Corp)
 
-.PARAMETER ParameterName
-Description of parameter
+.\02-create-users.ps1 -CsvPath ".\users.csv"
+# ✓ Successfully created 25 users
 
-.EXAMPLE
-.\script-name.ps1 -ParameterName "value"
+.\03-license-assignment.ps1 -CsvPath ".\licenses.csv"
+# [PREVIEW] Would assign 25 licenses (no changes)
 
-.NOTES
-Author: Your Name
-Created: YYYY-MM-DD
-Last Modified: YYYY-MM-DD
-#>
+.\03-license-assignment.ps1 -CsvPath ".\licenses.csv" -Apply
+# ✓ Assigned 25 licenses, 0 failed
+
+.\04-mailbox-setup.ps1
+.\07-create-groups.ps1 -CsvPath ".\groups.csv"
+.\08-enable-mfa.ps1 -UserEmail "*"
+# ✓ Infrastructure configured
+
+.\05-generate-reports.ps1
+# ✓ Reports exported to .\reports\
 ```
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: March 2, 2026*
+## Integration with Project Phases
+
+- **Phase 1** (M365 Deployment): Scripts 01-04
+- **Phase 2** (Security): Script 08
+- **Phase 3** (Collaboration): Script 07
+- **Phase 4** (Monitoring): Script 05  
+- **Ongoing**: Script 06 (monthly maintenance)
+
+See phase documentation in `02-phase-*-*` folders and `01-architecture`.
