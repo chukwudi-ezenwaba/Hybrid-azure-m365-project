@@ -22,19 +22,17 @@ On-Premises AD ←→ Azure AD Connect ←→ Azure Entra ID ←→ Microsoft 36
 
 ## The 11 Phase
 
-| Phase | Focus | 
-|-------|-------|-------|-----------|
-| **1** | M365 tenant, users, licenses |
-| **2** | Security policies, Defender, DLP |
-| **3** | SharePoint, OneDrive, Teams |
-| **4** | Monitoring, alerts, logging | 
-| **5** | Hybrid identity: AD DS → Entra | 
-| **6** | High availability backup | 
-| **7** | Azure networking, VPN, Site Recovery |
-| **8** | Workload migration to Azure |
-| **9** | File services, multi-site access |
-| **10** |RBAC design, least privilege | 
-| **11** | Intune enrollment, device compliance | 
+* 365 tenant, users, licenses 
+* curity policies, Defender, DLP 
+* SharePoint, OneDrive, Teams 
+* Monitoring, alerts, logging 
+* Hybrid identity: AD DS → Entra 
+* High availability backup 
+* Azure networking, VPN, Site Recovery 
+* Workload migration to Azure 
+* File services, multi-site access
+* RBAC design, least privilege 
+* Intune enrollment, device compliance 
 
 ## Key Technologies
 
