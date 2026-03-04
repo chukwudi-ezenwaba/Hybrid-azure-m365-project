@@ -77,7 +77,7 @@ Action: Alert security team
 
 ## On-Premises Active Directory
 
-- [ ] 2+ domain controllers (HA)
+- [ ] Domain Controller backup strategy (daily system state backup)
 - [ ] Separate DNS server (redundancy)
 - [ ] Domain controller replication monitored
 - [ ] Backup AD database weekly

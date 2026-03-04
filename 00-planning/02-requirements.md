@@ -22,7 +22,6 @@
 | TR-3 | Azure subscription | VNets, Backup, Site Recovery |
 | TR-4 | On-prem AD Domain Services | 2+ DC for redundancy |
 | TR-5 | VPN Gateway | IPsec site-to-site |
-| TR-6 | Backup space in Azure | Min 500GB |
 
 ## Non-Functional Requirements
 

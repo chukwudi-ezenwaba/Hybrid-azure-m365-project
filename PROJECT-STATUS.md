@@ -135,8 +135,8 @@
 ✅ Identity Layer          → AD DS + Entra ID + Conditional Access + MFA
 ✅ Security Layer          → Firewall, DLP, Defender, threat detection
 ✅ Service Layer           → Exchange, SharePoint, Teams, OneDrive
-✅ Infrastructure Layer    → VNets, Azure VMs, Load Balancers, SQL
-✅ Data Protection Layer   → Backup Vault, Site Recovery, Log Analytics
+✅ Infrastructure Layer    → On-Premises DC, Hyper-V VMs (HR App + File Server)
+✅ Data Protection Layer   → File Server Backup, M365 Retention, Audit Logs
 ```
 
 ### Security & Governance

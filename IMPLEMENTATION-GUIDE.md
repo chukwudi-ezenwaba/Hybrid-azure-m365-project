@@ -37,15 +37,15 @@ Before executing ANY phases, verify:
 ✓ Entra ID Premium P1 licenses (qty: all users + buffer)
 ✓ Azure subscription funded ($500-2000/month budget)
 ✓ Intune licenses (included in M365 E3+)
-✓ Azure Backup/Site Recovery enabled in subscription
+✓ File server backup to external storage configured
 ```
 
 #### Technical Prerequisites
 ```
-✓ On-premises Active Directory deployed (2+ domain controllers)
+✓ On-Premises Domain Controller deployed (single instance)
 ✓ AD contains all user accounts (synchronized before AAD Connect)
 ✓ Network connectivity between on-prem and Azure
-✓ VPN Gateway capacity planned (site-to-site IPsec)
+✓ Hyper-V Host configured with 2 VMs (HR app, File server)
 ✓ DNS forwarder configured for name resolution
 ✓ Firewall rules allow Office 365 endpoints (outbound 443/TCP)
 ```
@@ -548,17 +548,15 @@ Azure VNet (10.0.0.0/16)
 └─ Mgmt Subnet (10.0.4.0/24) - Bastion, monitoring
 
 Connected via:
-├─ VPN Gateway (site-to-site IPsec to on-premises)
-└─ Azure Firewall (centralized threat protection)
 ```
 
 **Execute These Steps** (see `08-phase-7-azure-infrastructure/01-azure-setup.md`):
 
-1. Create VNet with 4 subnets
-2. Deploy VPN Gateway (IPsec tunnel to on-premises)
-3. Create Network Security Groups (firewall rules per subnet)
-4. Deploy Azure Bastion (passwordless RDP/SSH access)
-5. Create backup vault (for VM snapshots)
+1. Configure Kerberos delegation for HR app SSO
+2. Enable SMB encryption on file server
+3. Configure NTFS permissions by department
+4. Configure SMB audit logging
+5. Schedule file server backup to external storage
 
 ---
 

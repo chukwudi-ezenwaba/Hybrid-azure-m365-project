@@ -27,7 +27,7 @@
 1. **Existing Infrastructure**
    - On-premises Active Directory already deployed (AD DS)
    - Network connectivity between on-prem + Azure exists
-   - 2+ domain controllers for redundancy
+   - 1 on-premises domain controller (single instance)
 
 2. **Budget & Resources**
    - M365 E3/E5 licenses budgeted + available
