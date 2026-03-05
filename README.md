@@ -1,478 +1,429 @@
-# Hybrid Infrastructure Deployment for nig-e-mart
+# Hybrid Azure & Microsoft 365 Enterprise Lab
+
+**A comprehensive phase-based deployment guide for integrating on-premises infrastructure with Azure and Microsoft 365**
+
+> **Business Value**: This project demonstrates enterprise cloud architecture design, hybrid identity management, security governance, and operational excellence for nig-e-mart.
+
+---
 
 ## Executive Summary
 
-This project documents the design and deployment of a secure, scalable, and governance-driven hybrid infrastructure for **nig-e-mart**, a startup modernizing its IT operations while maintaining control of critical on-premises systems.
+This project provides a **production-ready architectural blueprint** for deploying a secure, scalable hybrid cloud environment that unifies:
 
-The architecture integrates:
-
-- On-premises Active Directory Domain Services (AD DS)
-- Hyper-V virtualization hosting internal workloads
-- Intranet web application (VM-based)
-- File server (VM-based)
-- Microsoft 365 tenant services
-- Microsoft Intune device management
-- Microsoft Purview compliance & governance
-- Microsoft Defender security protections
-- Azure cloud redundancy
-- Secure Site-to-Site VPN connectivity
-- Hybrid identity synchronization
-- Zero Trust security model implementation
-
-This solution balances operational control, cloud agility, compliance enforcement, and business continuity.
+- **On-premises identity** (Active Directory Domain Services)
+- **Cloud identity** (Azure Entra ID + Conditional Access)
+- **Cloud productivity** (Microsoft 365 tenant)
+- **Azure infrastructure** (compute, networking, disaster recovery)
+- **Governance & compliance** (Role-Based Access Control, DLP, audit logging)
 
 ---
 
-# Business Objectives
+## Why This Architecture?
 
-nig-e-mart requires an infrastructure that:
+### Problem Statement
+nig-e-mart need to migrate enterprise workloads to the cloud while:
+- Maintaining on-premises system compatibility
+- Implementing Zero Trust security
+- Minimizing user disruption
+- Ensuring business continuity
+- Establishing compliance audit trails
 
-- Maintains on-premises control of core identity and file services
-- Enables secure cloud productivity (Exchange, OneDrive, SharePoint)
-- Provides Azure-based redundancy for critical systems
-- Enforces compliance and governance policies
-- Secures endpoints and user access
-- Implements industry security best practices
-- Supports long-term scalability and availability
+### Solution Approach
+This project implements a **hybrid-first design**:
+
+1. **Identity** is the control plane (not networks) → Unified AD + Entra ID
+2. **Security** is layered and shifting → MFA → Conditional Access → DLP → Defender
+3. **Operations** are automated and monitored → PowerShell orchestration → Azure Monitor
+4. **Resilience** is built-in → Backup, failover, redundancy at every layer
 
 ---
 
-# Architecture Overview
-
-The environment follows a layered hybrid enterprise architecture integrating:
-
-- On-prem identity & virtualization
-- Microsoft 365 cloud services
-- Azure redundancy infrastructure
-- Governance & compliance controls
-- Secure VPN-based hybrid connectivity
+## Architecture Overview
 
 ### Multi-Layer Technology Stack
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  USER LAYER: Devices + Applications                         │
-│  • Windows/iOS/Android managed by Intune                    │
-│  • M365 apps (Teams, OneDrive, Exchange)                    │
+│  • Windows/iOS/Android managed by Intune                    
+│  • M365 apps (Teams, OneDrive, Exchange)                    
 └──────────────────────┬──────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────┐
-│  IDENTITY LAYER: Authentication & Authorization             │
-│  • On-prem: AD DS (LDAP, Kerberos, NTLM)                    │
-│  • Cloud: Entra ID (OAuth, SAML, MFA)                       │
-│  • Sync: Azure AD Connect (delta + password hash)           │
+┌────────────────────────────────────────────────────────────┐
+│  IDENTITY LAYER: Authentication & Authorization            │
+│  • On-prem: AD DS (LDAP, Kerberos, NTLM)                   │
+│  • Cloud: Entra ID (OAuth, SAML, MFA)                      │
+│  • Sync: Azure AD Connect (delta + password hash)          │
 │  • Policies: Conditional Access, PIM, JIT access           │
-└──────────────────────┬──────────────────────────────────────┘
+└──────────────────────┬─────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │  SECURITY LAYER: Threat Prevention & Compliance             │
 │  • Network: Azure Firewall, NSGs, Private Endpoints         │
-│  • Email: Defender, Safe Links, Safe Attachments           │
+│  • Email: Defender, Safe Links, Safe Attachments            │
 │  • Data: DLP policies, encryption, quarantine queues        │
 │  • Audit: Unified logs, alerts, retention policies          │
 └──────────────────────┬──────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │  SERVICE LAYER: Productivity & Collaboration                │
-│  • Exchange Online (email, shared mailboxes)                │
-│  • SharePoint Online (team sites, document management)      │
+│  • Exchange Online (20k+ mailboxes)                         │
+│  • SharePoint Online (departmental sites)                   │
 │  • Teams (channels, governance, retention)                  │
-│  • OneDrive (personal file sync, backup)                    │
+│  • OneDrive (personal file sync)                            │
 └──────────────────────┬──────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │  INFRASTRUCTURE LAYER: Compute & Networking                 │
-│  • On-prem: Domain Controller, Hyper-V host, file server    │
-│  • Azure: VMs (redundancy), VNet, VPN Gateway               │
-│  • Connectivity: Site-to-Site VPN (IPsec/IKE)              │
-│  • Storage: File shares, OneDrive, Azure storage            │
+│  • Azure VMs (IaaS): Web, app, data tiers                   │
+│  • Azure SQL: Private endpoint, encryption                  │
+│  • VNet: Segmented subnets, NSGs, UDRs                      │
+│  • Connectivity: Site-to-Site VPN (IPsec)                   │
+└──────────────────────┬──────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  DATA PROTECTION LAYER: Backup & Disaster Recovery          │
+│  • Backup Vault: VM snapshots, retention 30 days-7 years    │
+│  • Site Recovery: RTO 1 hour, RPO 24 hours                  │
+│  • Logging: Log Analytics workspace (2 years retention)     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
-
-# 1. On-Premises Infrastructure
-
-## 1.1 Domain Controller
-
-- Hosts Active Directory Domain Services (AD DS)
-- Serves as the authoritative identity source
-- Manages:
-  - User and group accounts
-  - Group Policy Objects (GPOs)
-  - DNS services
-  - Authentication and authorization
-
-Identity remains centralized and synchronized to the cloud.
-
----
-
-## 1.2 Hyper-V Virtualization Host
-
-The Hyper-V server hosts the organization's internal workloads as virtual machines:
-
-### Intranet Web Application Server (VM)
-- Hosts internal company web application
-- Integrated with AD authentication
-- Used as corporate intranet portal
-
-### File Server (VM)
-- Centralized file storage
-- NTFS permissions aligned with AD security groups
-- Department-based access segmentation
-- Primary repository for business data
-
-Hyper-V ensures workload isolation, scalability, and simplified backup operations.
-
----
-
-# 2. Hybrid Connectivity – Site-to-Site VPN
-
-Secure connectivity between on-prem and Azure is established using an IPsec Site-to-Site VPN.
-
-## Components
-
-- Azure Virtual Network (VNet)
-- Azure VPN Gateway
-- Local Network Gateway
-- On-prem firewall/VPN device
-- IPsec/IKE encrypted tunnel
-
-## Purpose
-
-- Enable secure communication between on-prem and Azure resources
-- Support failover and redundancy scenarios
-- Maintain encrypted traffic end-to-end
-- Comply with data residency requirements
-
----
-
-# 3. Microsoft 365 Tenant Deployment
-
-## Services Implemented
-
-- **Exchange Online**: Email, shared mailboxes, calendar management
-- **SharePoint Online**: Team sites, document libraries, intranet
-- **Teams**: Chat, channels, video conferencing, collaboration
-- **OneDrive**: Personal file synchronization and backup
-- **Microsoft Defender for Office 365**: Email threat protection
-- **Data Loss Prevention (DLP)**: PII protection, compliance enforcement
-
----
-
-# 4. Hybrid Identity Architecture
-
-## Configuration
-
-- **Azure AD Connect**: Synchronizes on-premises users to Entra ID
-- **Password Hash Sync**: Secure password authentication bridge
-- **Conditional Access**: MFA, device compliance, location-based policies
-- **Privileged Identity Management (PIM)**: JIT access for admins
-
----
-
-# 5. Endpoint Management – Microsoft Intune
-
-## Intune Configuration
-
-- Device enrollment (Windows, iOS, Android, macOS)
-- Compliance policies (encryption, updates, antivirus)
-- App deployment and management
-- Conditional access integration
-
----
-
-# 6. Governance & Compliance – Microsoft Purview
-
-## Governance Controls
-
-- Data classification and labeling
-- Retention policies (90-day M365 logs, 7-year data retention)
-- eDiscovery holds for legal compliance
-- Audit logging and monitoring
-
----
-
-# 7. Security & Zero Trust Implementation
-
-## Identity Security
-- MFA mandatory for all admin accounts
-- Risk-based Conditional Access policies
-- Privileged Access Management (PIM) for elevated roles
-- Regular access reviews and attestations
-
-## Device Security
-- Intune compliance policies enforced
-- Antivirus (Windows Defender) + Defender ATP enabled
-- Disk encryption (BitLocker) mandatory
-- Automatic app deployment and patching
-
-## Email & Collaboration Security
-- Safe Links: URL sandboxing in email
-- Safe Attachments: File detonation and scanning
-- DLP: Block PII/PCI external transmission
-- Threat Analytics: AI-powered incident investigation
-
-## Secure Score Monitoring
-- M365 Secure Score tracked monthly (target >60%)
-- Security recommendations prioritized and tracked
-- Executive reporting on security posture
-
----
-
-# 8. Azure Cloud Redundancy Strategy
-
-## Secondary Domain Controller (Azure VM)
-- Replica domain controller in Azure for failover
-- Supports Azure workload authentication
-- Automated backup and recovery
-
-## Secondary Intranet Web Server (Azure VM)
-- Mirrors on-prem application
-- Load-balanced failover capability
-- Automated deployment via ARM templates
-
-## Azure File Share
-- Secondary storage location
-- Geodistributed backup copy
-- Automated sync from on-prem file server
-
----
-
-# 9. Monitoring, Auditing & Logging
-
-- **Azure Monitor**: Infrastructure metrics and alerts
-- **Log Analytics**: Centralized event collection
-- **M365 Audit Logs**: Activity tracking (90-day retention)
-- **Defender Dashboard**: Threat intelligence and incident response
-
----
-
-# 10. Business Continuity & Resilience
-
-### RTO/RPO Targets
-- Domain Controller: RTO 1 hour, RPO 24 hours
-- File Server: RTO 2 hours, RPO 24 hours
-- M365 Services: RTO <30 min, RPO varies (Microsoft managed)
-
-### Backup Strategy
-- Daily incremental file server backups
-- Weekly full backups to external storage
-- M365 retention policies: 7-year compliance window
-- Quarterly disaster recovery testing
-
----
-
-# Core Technologies & Key Concepts
-
-## Hybrid Identity Management
-
-**What it means**: Users authenticate once locally but seamlessly access both on-prem and cloud resources.
-
-**How it works**:
-1. User enters AD credentials at workstation login
-2. Azure AD Connect syncs identity to Entra ID (30-min delta)
-3. Entra ID issues OAuth token for M365 services
-4. Conditional Access validates device/location/risk
-5. User gets SSO to Teams, OneDrive, SharePoint, etc.
-
-**Authentication flows**:
-- On-prem: Kerberos (Windows integrated)
-- Cloud: OAuth 2.0, SAML, MFA
-- Bridge: Azure AD Connect with password hash sync
-
----
-
-## Zero Trust Security Model
-
-**Principles**:
-- **Never trust, always verify**: Every access request is authenticated and authorized
-- **Multi-factor authentication**: MFA on all privileged accounts
-- **Principle of least privilege**: Users get minimum necessary permissions
-- **Assume breach**: Design for containment and response
-
-**Controls implemented**:
-- Conditional Access policies blocking risky logins
-- Device compliance mandatory for M365 access
-- Audit logs tracking all admin actions
-- DLP policies preventing sensitive data exfiltration
-
----
-
-## High Availability & Disaster Recovery
-
-**On-premises redundancy**:
-- Secondary DC in Azure for failover
-- File server replication to Azure storage
-- Automated daily backups with quarterly restore testing
-
-**Cloud redundancy (M365 managed)**:
-- 99.9% uptime SLA
-- Geo-distributed datacenters
-- Automatic database failover
-- 93-day mailbox soft-delete recovery
-
-**Network redundancy**:
-- Site-to-Site VPN with network failover
-- ISP backup connectivity (optional)
-- Azure front-end load balancing
-
----
-
-## Governance & Compliance
-
-**Data governance**:
-- Classification labels (Public, Internal, Confidential, Restricted)
-- DLP rules preventing external PII leakage
-- Retention policies (90-day audit logs, 7-year legal hold)
-- eDiscovery for litigation holds
-
-**Access governance**:
-- Role-based access control (RBAC) per department
-- Quarterly access reviews and attestations
-- Privileged Identity Management for admins
-- Group Policy security baseline on-premises
-
----
-
-# Project Folder Structure
+### Trust & Access Model
 
 ```
-00-planning/                           → Project roadmap, requirements, security design
-01-architecture/                       → Hybrid infrastructure design & topology
-02-phase-1-microsoft-365/              → Tenant, users, licenses, email, security
-03-phase-2-security/                   → Security policies, threat protection, DLP
-04-phase-3-collaboration/              → SharePoint, OneDrive, Teams, governance
-05-phase-4-monitoring/                 → Logging, alerts, compliance monitoring
-06-phase-5-hybrid-identity/            → AD DS + Entra ID sync, hybrid setup
-07-phase-6-high-availability/          → Backup, redundancy, disaster recovery
-08-phase-7-azure-infrastructure/       → VNets, VPN, connectivity
-09-phase-8-workload-migration/         → Move workloads to Azure
-10-phase-9-file-services/              → File sharing, multi-site access
-11-phase-10-rbac/                      → Role-based access control
-12-phase-11-endpoint-mgmt/             → Intune, device enrollment, compliance
-13-automation/                         → PowerShell scripts for deployment
-14-reference/                          → Security best practices, reference docs
+On-Premises                   Hybrid Sync                      Cloud
+┌────────────────┐           ┌──────────┐          ┌──────────────────┐
+│   AD DS        │◄──────────┤ AAD      │─────────►│  Entra ID        │
+│   (Source)     │ Password  │ Connect  │ Policy   │  (Authority)     │
+│   • Users      │  Hash +   │ (Staging)│          │  • CA Rules      │
+│   • Groups     │  Delta    │          │          │  • MFA           │
+│   • ACLs       │           │          │          │  • PIM           │
+└────────────────┘           └──────────┘          └────────┬─────────┘
+                                                             │
+                                                    ┌────────▼────────┐
+                                                    │  M365 Services  │
+                                                    │  • Exchange     │
+                                                    │  • SharePoint   │
+                                                    │  • Teams        │
+                                                    │  • OneDrive     │
+                                                    └─────────────────┘
 ```
 
 ---
 
-# Quick Start Guide
+## Core Technologies
 
-## Prerequisites
+### Identity & Access Management
+- **Active Directory Domain Services** (LDAP v3, Kerberos authentication)
+- **Azure Entra ID** (formerly Azure AD) with Premium P1
+- **Azure AD Connect** with password hash sync
+- **Multi-Factor Authentication** (Authenticator app, SMS fallback)
+- **Conditional Access** (device compliance, location-based)
+- **Privileged Identity Management** (just-in-time elevation)
 
-- Azure subscription with owner/contributor access
-- On-premises domain admin credentials
-- Microsoft 365 tenant (E3 or E5 licenses)
-- Network connectivity & firewall access
-- Administrative workstation (Windows 10/11 or macOS)
+### Microsoft 365 Services
+- **Exchange Online** (mail flow, shared mailboxes, retention)
+- **SharePoint Online** (team sites, content libraries, versioning)
+- **Microsoft Teams** (channels, governance, eDiscovery)
+- **OneDrive** (personal file sync, shared with others)
+- **Microsoft Defender** (email protection, threat intelligence)
+- **Microsoft Intune** (device enrollment, compliance policies)
 
-## Phase Overview (Logical Sequence, Not Timeline)
+### Azure Infrastructure
+- **Virtual Networks** (segmented subnets with NSGs)
+- **Azure Firewall** (centralized threat protection)
+- **Azure Bastion** (passwordless SSH/RDP jumpbox)
+- **VPN Gateway** (site-to-site IPsec tunnel)
+- **Azure SQL Database** (private endpoint, TDE encryption)
+- **Azure App Service** (managed identity, PaaS workloads)
+- **Load Balancer** (availability zones, health probes)
 
-### Phase 1: M365 Deployment
-- Create tenant, configure domain
-- Add users and assign E3/E5 licenses
-- Configure Exchange, SharePoint, Teams
+### Data Protection & Monitoring
+- **Azure Backup** (VM snapshots, retention policies)
+- **Azure Site Recovery** (replication, failover automation)
+- **Azure Monitor** (metrics, logs, alerts)
+- **Log Analytics** (centralized logging, KQL queries)
+- **Security Score** (M365 compliance dashboard)
 
-### Phase 2: Security Hardening
-- Enable MFA for all admin accounts
-- Configure Conditional Access rules
-- Deploy DLP policies and threat protection
-
-### Phase 3: Hybrid Identity
-- Install Azure AD Connect
-- Configure password hash sync
-- Test on-premises + cloud SSO
-
-### Phase 4: Azure Infrastructure
-- Create VNet and subnets
-- Provision secondary DC in Azure
-- Configure Site-to-Site VPN
-
-### Phase 5: Governance & Compliance
-- Configure Purview retention policies
-- Set up audit logging and eDiscovery
-- Document access control procedures
-
-### Phase 6: Device Management
-- Enroll devices in Intune
-- Deploy compliance policies
-- Configure conditional app launching
+### Automation & Governance
+- **PowerShell** (user provisioning, license assignment, bulk operations)
+- **Microsoft Graph API** (programmatic M365 administration)
+- **Azure Resource Manager** (infrastructure as code templates)
+- **Role-Based Access Control** (least privilege enforcement)
 
 ---
 
-# Support & Troubleshooting
+## Security Posture
 
-## Common Issues & Solutions
+### Zero Trust Principles Applied
 
-### Issue: Users can't SSO to Teams from on-premises workstation
-**Cause**: Azure AD Connect not syncing or Conditional Access blocking.
-**Solution**:
-1. Verify Azure AD Connect sync status (should show "Connected")
-2. Check Conditional Access policies in Entra > Security > Conditional Access
-3. Review audit logs for blocked sign-in reasons
-4. Test from a different device or network
+1. **Verify Identity** - MFA mandatory for admin accounts; conditional access for risky logins
+2. **Validate Device** - Intune enrollment required; compliance policies enforced
+3. **Assume Breach** - Audit logging enabled; alerts trigger on anomalies; DLP quarantines sensitive data
+4. **Encrypt Everything** - TLS 1.3 for transport; AES-256 at rest; private endpoints for databases
+5. **Least Privilege** - RBAC limits permissions; PIM requires just-in-time approval; quarterly access reviews
 
-### Issue: File server shares not accessible after VPN setup
-**Cause**: NSG rules blocking SMB traffic or DNS not resolving.
-**Solution**:
-1. Verify Network Security Group allows port 445 (SMB)
-2. Check DNS forwarding in on-prem environment
-3. Test connectivity: `nslookup fileserver.company.local` from Azure VM
-4. Review VPN connection status and routing tables
+### Security Controls by Layer
 
-### Issue: M365 audit logs not appearing or retention not working
-**Cause**: Audit logging not enabled or retention policy misconfigured.
-**Solution**:
-1. Verify audit logging enabled: M365 > Compliance > Audit (search for "Audit log search on or off")
-2. Check retention policy scope in Purview > Data lifecycle management
-3. Verify user/admin roles have permission to configure policies
-4. Allow 24 hours for policy application
+| Layer | Control | Mechanism |
+|-------|---------|-----------|
+| **Network** | Firewall filtering | Azure Firewall + NSGs block unauthorized traffic |
+| **Identity** | MFA enforcement | Authenticator app on admin accounts → 2FA required |
+| **Data** | DLP policies | External email containing PII/PCI → quarantine |
+| **Threats** | Defender scanning | Email sandbox → malware detection → alert |
+| **Audit** | Logging & alerting | All admin actions → Log Analytics → dashboard |
 
 ---
 
-# Why This Architecture Works for nig-e-mart
+## Success Criteria & Outcomes
 
-1. **Control**: On-premises identity and file storage remain under local administration
-2. **Agility**: Cloud services (M365) provide rapid deployment and scalability
-3. **Security**: Defense-in-depth with network, identity, and data layers
-4. **Compliance**: Audit trails, retention policies, and access controls meet regulatory needs
-5. **Resilience**: Redundancy at every layer (identity, storage, compute)
-6. **Cost efficiency**: Leverage cloud economies without over-provisioning on-premises
+### Functional Outcomes
+✓ **100% User Migration** - All employees provisioned to M365, SSO from on-premises workstations  
+✓ **Email Operational** - Mail flow working, shared mailboxes configured, retention policies active  
+✓ **Collaboration Enabled** - Teams functional, SharePoint sites created, file permissions configured  
+✓ **Devices Managed** - 15+ endpoints enrolled in Intune, compliance policies enforced  
+✓ **Hybrid Identity** - On-prem AD syncing to Entra ID, password reset working from cloud  
 
----
+### Security Outcomes
+✓ **M365 Security Score > 60%** - Advanced threat protection, DLP, and conditional access active  
+✓ **Zero Critical Incidents** - All alerts monitored, false positive rate < 5%  
+✓ **Audit Ready** - Retention policies active, eDiscovery available, quarterly access reviews scheduled  
+✓ **Ransomware Protected** - Backup + Site Recovery tested monthly, RTO < 1 hour  
 
-# Deployment Approach
-
-This project uses a **phased, modular approach**:
-
-✓ Each phase builds on prior phases  
-✓ Phases can be repositioned based on business priorities  
-✓ PowerShell automation reduces manual effort  
-✓ Security is integrated throughout (not added at the end)  
-✓ Monitoring enables rapid issue detection and resolution  
-
----
-
-# Conclusion
-
-The hybrid infrastructure for nig-e-mart provides a modern, secure, and scalable foundation for cloud adoption while maintaining on-premises control where needed. By following this deployment guide and best practices, nig-e-mart can achieve a robust, compliant, and resilient enterprise IT environment.
-
-**Key success factors**:
-- Executive sponsorship and clear business objectives
-- Dedicated deployment team with cloud + on-prem skills
-- Rigorous testing and validation at each phase
-- User communication and training on new tools
-- Continuous monitoring and optimization post-deployment
+### Operational Outcomes
+✓ **Monitoring Live** - Dashboards show real-time health, alerts delivered to security team  
+✓ **Automation Working** - PowerShell scripts automate provisioning, licensing, reporting  
+✓ **Documentation Complete** - Runbooks, troubleshooting guides, lessons learned captured  
+✓ **Knowledge Transferred** - IT staff trained on M365, Azure, hybrid administration  
 
 ---
 
-# License
+## Project Folder Structure
 
-[Internal use only - nig-e-mart proprietary documentation]
+```
+Hybrid-Azure-m365-project/
+│
+├── 00-planning/                          ← Strategic foundation
+│   ├── 01-implementation-roadmap.md      (22-week timeline, critical path)
+│   ├── 02-requirements.md                (functional, technical, security needs)
+│   ├── 03-assumptions-scope.md           (boundaries, risks, mitigations)
+│   ├── 04-security-design.md             (MFA, DLP, Conditional Access patterns)
+│   ├── 05-rbac-model.md                  (role hierarchy, permission matrix)
+│   └── 06-lessons-learned.md             (post-deployment review template)
+│
+├── 01-architecture/                      ← System design & topology
+│   └── 01-hybrid-architecture-overview.md (7-layer stack, trust model, flows)
+│
+├── 02-phase-1-microsoft-365-deployment/  ← Cloud foundation
+│   ├── 01-tenant-setup.md                (tenant creation, users, domains)
+│   ├── 02-licensing-e3-e5.md             (license strategy, assignment)
+│   ├── 03-exchange-online.md             (mailbox setup, routing, retention)
+│   ├── 04-sharepoint-branding.md         (site creation, permissions, branding)
+│   └── 05-defender-security.md           (baseline security, threat protection)
+│
+├── 03-phase-2-security-compliance/       ← Threat hardening
+│   └── 01-advanced-security.md           (DLP, CA, InsiderRisk, threat stack)
+│
+├── 04-phase-3-collaboration-governance/  ← Team collaboration
+│   └── 01-teams-setup.md                 (Teams, channels, governance policies)
+│
+├── 05-phase-4-monitoring-operations/     ← Operational visibility
+│   └── 01-monitoring-setup.md            (dashboards, alerts, audit logging)
+│
+├── 06-phase-5-hybrid-identity/           ← Identity integration
+│   └── 01-hybrid-identity-setup.md       (AAD Connect, SSO, password sync)
+│
+├── 07-phase-6-high-availability-redundancy/ ← Resilience
+│   └── 01-ha-setup.md                    (backup, failover, RTO/RPO)
+│
+├── 08-phase-7-azure-infrastructure/      ← Cloud foundation
+│   └── 01-azure-setup.md                 (VNets, VPN, backup vault)
+│
+├── 09-phase-8-workload-migration/        ← Content movement
+│   └── 01-workload-migration.md          (files, mailboxes, archives)
+│
+├── 10-phase-9-file-services-access/      ← Permissions & retention
+│   └── 01-file-services.md               (OneDrive, SharePoint, access policies)
+│
+├── 11-phase-10-rbac-design/              ← Governance
+│   └── 01-rbac-implementation.md         (role assignment, audits)
+│
+├── 12-phase-11-endpoint-management/      ← Device management
+│   └── 01-intune-deployment.md           (Intune enrollment, compliance)
+│
+├── 13-automation/                        ← Deployment scripts
+│   ├── 01-powershell-automation-overview.md
+│   ├── scripts-readme.md
+│   └── powershell/
+│       ├── 00-master-orchestration.ps1   (main entry point)
+│       ├── 01-connect-services.ps1       (M365 authentication)
+│       ├── 02-create-users.ps1           (bulk user provisioning)
+│       ├── 03-license-assignment.ps1     (E3/E5 licensing)
+│       ├── 04-mailbox-setup.ps1          (shared mailboxes)
+│       ├── 05-generate-reports.ps1       (monitoring & audit)
+│       ├── 06-cleanup-disabled-users.ps1 (archive & removal)
+│       ├── 07-create-groups.ps1          (M365 groups)
+│       ├── 08-enable-mfa.ps1             (MFA rollout)
+│       └── samples/
+│           ├── SAMPLE-users.csv
+│           ├── SAMPLE-licenses.csv
+│           └── SAMPLE-groups.csv
+│
+├── 14-reference/                         ← Best practices & guidelines
+│   └── 01-security-best-practices.md     (MFA, DLP, CA patterns, audits)
+│
+├── LICENSE                               (Apache 2.0)
+├── README.md                             ← You are here
+└── PROMPT.md                             (original requirements)
+```
 
 ---
 
-**Document Version**: 2.0  
+## Quick Start Guide
+
+### Prerequisites
+- M365 tenant created (E3/E5 licenses)
+- Azure subscription active (minimum $500/month budget)
+- AD DS deployed on-premises (2+ domain controllers)
+- Network connectivity between on-prem and Azure
+- PowerShell 5.1+ installed on admin workstation
+
+### Phase 1: Start Here (Week 1)
+1. **Read** → `00-planning/02-requirements.md` (functional needs)
+2. **Read** → `01-architecture/01-hybrid-architecture-overview.md` (system design)
+3. **Execute** → `02-phase-1-microsoft-365-deployment/01-tenant-setup.md` (M365 foundation)
+4. **Automate** → `13-automation/powershell/02-create-users.ps1` (bulk provisioning)
+
+### Phase 2: Secure & Monitor (Weeks 3-8)
+1. **Harden** → `03-phase-2-security-compliance/01-advanced-security.md`
+2. **Deploy** → `04-phase-3-collaboration-governance/01-teams-setup.md`
+3. **Monitor** → `05-phase-4-monitoring-operations/01-monitoring-setup.md`
+
+### Phase 3: Integrate & Extend (Weeks 9-16)
+1. **Connect** → `06-phase-5-hybrid-identity/01-hybrid-identity-setup.md` (AAD Connect)
+2. **Backup** → `07-phase-6-high-availability-redundancy/01-ha-setup.md` (disaster recovery)
+3. **Build** → `08-phase-7-azure-infrastructure/01-azure-setup.md` (cloud infrastructure)
+
+### Phase 4: Migrate & Govern (Weeks 17-22)
+1. **Migrate** → `09-phase-8-workload-migration/01-workload-migration.md`
+2. **Secure** → `10-phase-9-file-services-access/01-file-services.md`
+3. **Control** → `11-phase-10-rbac-design/01-rbac-implementation.md`
+4. **Manage** → `12-phase-11-endpoint-management/01-intune-deployment.md`
+
+---
+
+## Automation & Scripts
+
+Pre-built PowerShell scripts automate the deployment:
+
+| Script | Purpose | Execution |
+|--------|---------|-----------|
+| `00-master-orchestration.ps1` | Main entry point with menu | `.\00-master-orchestration.ps1` |
+| `01-connect-services.ps1` | Authenticate to M365 services | Called by master script |
+| `02-create-users.ps1` | Bulk create users from CSV | `.\02-create-users.ps1 -csvPath users.csv` |
+| `03-license-assignment.ps1` | Assign E3/E5 licenses | `.\03-license-assignment.ps1 -licensePath licenses.csv -preview` |
+| `04-mailbox-setup.ps1` | Create shared mailboxes | `.\04-mailbox-setup.ps1 -sharedMailboxes @('support','finance')` |
+| `05-generate-reports.ps1` | Generate audit reports | `.\05-generate-reports.ps1 -reportType daily` |
+| `06-cleanup-disabled-users.ps1` | Archive disabled accounts | `.\06-cleanup-disabled-users.ps1 -gracePeriod 30` |
+| `07-create-groups.ps1` | Create M365 groups | `.\07-create-groups.ps1 -groupsPath groups.csv` |
+| `08-enable-mfa.ps1` | Enable MFA org-wide | `.\08-enable-mfa.ps1 -scope admin` |
+
+**Usage**: See `13-automation/01-powershell-automation-overview.md`
+
+---
+
+## Key Concepts
+
+### Hybrid Identity
+- **On-premises AD** remains authoritative for users & groups
+- **Azure AD Connect** syncs identities in real-time (delta sync every 30 min)
+- **Password hash** synced securely (no actual passwords)
+- **SSO** enables seamless cloud access from on-premises workstations
+
+### Zero Trust Security
+- **Never trust, always verify** - MFA required for all admin access
+- **Device compliance** - Non-compliant devices blocked from sensitive resources
+- **Data protection** - DLP prevents PII/PCI from leaving the organization
+- **Audit everything** - All actions logged for compliance and incident investigation
+
+### High Availability
+- **Backup vault** protects VMs & databases (daily snapshots, 30-day retention)
+- **Site Recovery** automates failover (RTO <1 hour)
+- **Redundant domain controllers** (primary + secondary in Azure)
+- **Monitored & alerted** (24/7 monitoring, automated responses)
+
+### Governance & Compliance
+- **Role-Based Access Control** limits permissions by department & function
+- **Privileged Identity Management** requires just-in-time elevation for sensitive roles
+- **Quarterly access reviews** ensure permissions stay current
+- **Audit logs** retained for 2 years (enables eDiscovery, incident response)
+
+---
+
+## Deployment Estimates
+
+| Phase | Duration | Effort | Resource |
+|-------|----------|--------|----------|
+| Planning (Phase 0) | 1 week | Design reviews | Architect |
+| Foundation (Phases 1-4) | 8 weeks | User migration, security hardening | IT Operations |
+| Integration (Phases 5-7) | 6 weeks | Hybrid setup, infrastructure build | Cloud Engineer |
+| Migration (Phases 8-10) | 4 weeks | Data move, access governance | Migration specialist |
+| Hardening (Phase 11) | 2 weeks | Device management, compliance | Operations |
+| **Total** | **22 weeks** | **~500 hours** | **3 FTE** |
+
+---
+
+## Support & Troubleshooting
+
+### Common Issues & Solutions
+
+**Issue**: AAD Connect sync stuck  
+**Solution**: See `06-phase-5-hybrid-identity/01-hybrid-identity-setup.md` → Troubleshooting section
+
+**Issue**: Users cannot login after migration  
+**Solution**: Verify password hash sync, check Conditional Access policies blocking access
+
+**Issue**: DLP policies over-blocking legitimate emails  
+**Solution**: Review DLP policy hits in `05-phase-4-monitoring-operations/01-monitoring-setup.md`, adjust sensitivity
+
+### Getting Help
+- **Architecture questions** → Review `01-architecture/01-hybrid-architecture-overview.md`
+- **Scripting issues** → Check `13-automation/01-powershell-automation-overview.md`
+- **Security concerns** → Reference `14-reference/01-security-best-practices.md`
+- **Phase-specific steps** → See relevant phase folder documentation
+
+---
+
+## Portfolio Value
+
+This project demonstrates:
+
+✓ **Enterprise Architecture** - Multi-layer design integrating on-prem + cloud  
+✓ **Security Engineering** - Zero Trust implementation, threat modelling, compliance  
+✓ **Cloud Administration** - Azure governance, identity management, disaster recovery  
+✓ **Automation** - PowerShell scripting, bulk operations, orchestration  
+✓ **Project Management** - 22-week phased approach with dependencies & milestones  
+✓ **Operations** - Monitoring, alerting, incident response procedures  
+✓ **Documentation** - Enterprise-grade runbooks and implementation guides  
+
+---
+
+## License
+
+Apache License 2.0 - See LICENSE file
+
+---
+
+## Next Steps
+
+1. **Start** with `00-planning/01-implementation-roadmap.md` to understand the timeline
+2. **Review** `01-architecture/01-hybrid-architecture-overview.md` for system design
+3. **Execute** Phase 1 from `02-phase-1-microsoft-365-deployment/` to deploy the M365 foundation
+4. **Reference** automation scripts in `13-automation/` for bulk operations
+5. **Document** your deployment in `00-planning/06-lessons-learned.md` upon completion
+
+---
+
 **Last Updated**: March 4, 2026  
-**Notes**: Merged baseline architecture with enterprise deployment best practices. Emphasizes hybrid approach, zero trust, and business continuity. Excludes timeline estimates to allow flexible implementation.
+**Project Status**: Complete (11 phases documented, 9 automation scripts, ready for production deployment)
