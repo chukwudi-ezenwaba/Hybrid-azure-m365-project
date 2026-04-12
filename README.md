@@ -61,13 +61,13 @@ The environment follows a layered hybrid enterprise architecture integrating:
 │  • On-prem: AD DS (LDAP, Kerberos, NTLM)                    │
 │  • Cloud: Entra ID (OAuth, SAML, MFA)                       │
 │  • Sync: Azure AD Connect (delta + password hash)           │
-│  • Policies: Conditional Access, PIM, JIT access           │
+│  • Policies: Conditional Access, PIM, JIT access            │
 └──────────────────────┬──────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │  SECURITY LAYER: Threat Prevention & Compliance             │
 │  • Network: Azure Firewall, NSGs, Private Endpoints         │
-│  • Email: Defender, Safe Links, Safe Attachments           │
+│  • Email: Defender, Safe Links, Safe Attachments            │
 │  • Data: DLP policies, encryption, quarantine queues        │
 │  • Audit: Unified logs, alerts, retention policies          │
 └──────────────────────┬──────────────────────────────────────┘
@@ -84,7 +84,7 @@ The environment follows a layered hybrid enterprise architecture integrating:
 │  INFRASTRUCTURE LAYER: Compute & Networking                 │
 │  • On-prem: Domain Controller, Hyper-V host, file server    │
 │  • Azure: VMs (redundancy), VNet, VPN Gateway               │
-│  • Connectivity: Site-to-Site VPN (IPsec/IKE)              │
+│  • Connectivity: Site-to-Site VPN (IPsec/IKE)               │
 │  • Storage: File shares, OneDrive, Azure storage            │
 └─────────────────────────────────────────────────────────────┘
 ```
