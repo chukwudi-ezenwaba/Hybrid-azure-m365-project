@@ -1,203 +1,45 @@
-# Implementation Roadmap: Hybrid-Azure-m365 Project
+# Project Plan: Hybrid-Azure-m365
 
-## Critical Path Dependencies
+## What This Project Is
 
-* Phase 1 (M365) → Phase 5 (Hybrid) ┐
-* Phase 2 (Security) → Phase 3 (Teams) → Phase 4 (Monitor) → Phase 8-10
-* Phase 5 (Identity) → Phase 6 (HA) → Phase 7 (Azure) → Phase 8
-* Phase 8-10 → Phase 11 (Intune)
+nig-e-mart is a growing startup that needs to modernise its IT infrastructure without abandoning on-premises control of its core systems. This project delivers a hybrid cloud environment that connects the existing on-premises Active Directory and Hyper-V workloads to Microsoft 365 and Azure. The end result is a unified identity system where users sign in once and access both local and cloud resources seamlessly, a fully governed Microsoft 365 deployment for email, collaboration, and file management, and an Azure-backed redundancy layer that keeps critical systems available even if the on-premises environment goes offline.
 
-
-## Key Milestones
-
-- Users can login to M365, email working
-- Security baseline active, threats detected
-- Monitoring dashboards showing data
-- Hybrid identity functional (on-prem SSO)
-- Azure infrastructure + backup operational
-- File services migrated to cloud
-- Devices managed, go-live complete
-
-## Success Metrics
-
-✓ 100% user migration to M365  
-✓ 95%+ device enrollment in Intune  
-✓ Zero data loss during migration  
-✓ Security Score > 60% (M365)  
-✓ Zero unplanned downtime  
-✓ <1 hour RTO for critical services  
 ---
 
-# Hybrid-Azure-m365 Project Overview
+## Scope
 
-## Project At A Glance
+The project covers eleven implementation phases, each building on the previous one. It begins with provisioning the Microsoft 365 tenant and migrating users, then layers on security hardening, hybrid identity synchronisation, Azure infrastructure, high availability through Azure Site Recovery, file services, role-based access controls, and finally endpoint management through Intune.
 
-| Aspect | Details |
-|--------|---------|
-| **Scope** | Enterprise hybrid cloud migration: on-premises AD → Azure/M365 |
-| **Target Org** | Mid-sized organization (500-5000 users) |
-| **Key Result** | Unified identity, secure collaboration, modern IT ops |
-| **Main Components** | AD DS, Entra ID, Microsoft 365, Azure, Intune |
+What is not in scope: changes to physical network infrastructure, decommissioning of legacy systems, third-party application integrations, custom development work, or personnel changes. The on-premises Active Directory is assumed to already exist and be healthy.
 
-## What This Project Does
+---
 
-**Goal**: Integrate on-premises Active Directory with Microsoft 365 and Azure while maintaining security, enabling collaboration, and modernizing operations.
+## Key Requirements
 
-**Architecture**: 
-```
-On-Premises AD ←→ Azure AD Connect ←→ Azure Entra ID ←→ Microsoft 365
-      ↓                               ↓
-   Users/Groups                    SSO/MFA/Access Control
-```
+For the deployment to succeed, every user must be provisioned into Microsoft 365 and assigned an E3 or E5 licence. Email must route through Exchange Online, and documents, team workspaces, and file storage must be accessible through SharePoint, Teams, and OneDrive respectively. Single sign-on from on-premises workstations must work without users re-entering credentials. All admin accounts must be protected by MFA from day one, and Data Loss Prevention policies must block externally transmitted PII and payment card data. Devices must be enrolled in Intune and confirmed compliant before they can access corporate M365 resources.
 
-## The 11 Phase
+On the technical side, the deployment requires an active Azure subscription, Entra ID Premium P1 licences for Conditional Access, a minimum of two domain controllers (primary on-premises and secondary in Azure), and an IPsec VPN gateway for site-to-site connectivity between on-premises and Azure.
 
-* 365 tenant, users, licenses 
-* security policies, Defender, DLP 
-* SharePoint, OneDrive, Teams 
-* Monitoring, alerts, logging 
-* Hybrid identity: AD DS → Entra 
-* High availability backup 
-* Azure networking, VPN, Site Recovery 
-* Workload migration to Azure 
-* File services, multi-site access
-* RBAC design, least privilege 
-* Intune enrollment, device compliance 
+Recovery targets for on-premises systems are an RTO of one hour and an RPO of 24 hours. Microsoft 365 services are covered by Microsoft's 99.9% SLA and do not require separate recovery planning.
 
-## Key Technologies
+---
 
-- **Identity**: Active Directory DS + Azure Entra ID + Premium
-- **M365**: Tenant, Exchange, SharePoint, Teams, Defender
-- **Azure**: VNet, VPN, Firewall, Backup, Site Recovery
-- **Security**: MFA, Conditional Access, DLP, Audit logs
-- **Devices**: Intune enrollment, compliance policies, group policy
+## Assumptions
+
+The project assumes the existing on-premises Active Directory is healthy and operational, with at least one domain controller running Windows Server 2019 or later. A minimum of 10 Mbps internet bandwidth is available. DNS must be updatable at the registrar level to allow SPF and DKIM records to be created for email security. Azure VNet IP ranges must not conflict with on-premises subnets. Three IT staff are allocated to the project with executive sponsorship confirmed, and M365 and Azure licensing is budgeted and approved.
+
+---
+
+## Risks
+
+The most significant risk is user resistance during the transition from familiar on-premises tools to cloud-based services. This is managed through a structured change management programme, including manager briefings and end-user training before go-live. A secondary risk is data loss during file migration, which is mitigated by running validation checksums and maintaining parallel access to original documents until each migration batch is verified. There is also a risk that security policies — particularly Conditional Access — are initially too restrictive and lock out legitimate users. To address this, all new policies will be deployed in Report-only mode first and tested with a pilot group before enforcement is enabled organisation-wide.
+
+---
 
 ## Success Criteria
 
-- ✓ All users synced to cloud with SSO enabled
-- ✓ M365 E3/E5 licenses assigned and working
-- ✓ Hybrid identity functional (on-prem AD + cloud)
-- ✓ VPN connectivity: on-premises ↔ Azure
-- ✓ Security policies: MFA, DLP, threat protection active
-- ✓ Intune: 80%+ device enrollment
-- ✓ Backup and recovery tested
+The deployment is considered successful when all users are synchronised to Entra ID and can sign in to Microsoft 365 with SSO from their on-premises workstations, when 95% or more of corporate devices are enrolled in and compliant with Intune, when the M365 Secure Score exceeds 60%, when Azure Site Recovery has completed a successful non-disruptive test failover for all protected VMs, and when the organisation has experienced zero unplanned downtime across the migration window.
 
-
----
-
-# Project Requirements: Hybrid-Azure-m365
-
-## Functional Requirements
-
-| Req ID | Requirement | Phase |
-|--------|-------------|-------|
-| FR-1 | All users provision to M365 cloud | Phase 1 |
-| FR-2 | Email delivery via Exchange Online | Phase 1 |
-| FR-3 | Document collaboration via Teams/SharePoint | Phase 3 |
-| FR-4 | SSO from on-premises workstations | Phase 5 |
-| FR-5 | MFA for all admin accounts | Phase 2 |
-| FR-6 | DLP policy enforcement (block PII external) | Phase 2 |
-| FR-7 | Devices managed by Intune | Phase 11 |
-| FR-8 | Backup to Azure for recovery | Phase 7 |
-
-## Technical Requirements
-
-| Req ID | Requirement | Details |
-|--------|-------------|---------|
-| TR-1 | M365 E3/E5 licenses | All users |
-| TR-2 | Entra ID Premium P1 | Conditional Access |
-| TR-3 | Azure subscription | VNets, Backup, Site Recovery |
-| TR-4 | On-prem AD Domain Services | 2+ DC for redundancy |
-| TR-5 | VPN Gateway | IPsec site-to-site |
-
-## Non-Functional Requirements
-
-| Req ID | Requirement | Target |
-|--------|-------------|--------|
-| NFR-1 | RTO (Recovery Time Objective) | 1 hour max |
-| NFR-2 | RPO (Recovery Point Objective) | 24 hours |
-| NFR-3 | Availability (M365 services) | 99.9% |
-| NFR-4 | User adoption | >80% in 8 weeks |
-| NFR-5 | Security Score (M365) | >60% minimum |
-| NFR-6 | Email delivery (no outages) | 99.95% |
-
-## Security Requirements
-
-- [ ] MFA enabled for all admin accounts
-- [ ] DLP policy enforcing PII/PCI protection
-- [ ] Conditional Access restricting risky logins
-- [ ] Legacy authentication disabled
-- [ ] Audit logging for all services
-- [ ] Data encryption at rest + in transit
-- [ ] Quarterly access reviews
-
-## Compliance Requirements
-
-- [ ] GDPR-ready (if applicable)
-- [ ] 7-year data retention
-- [ ] eDiscovery holds available
-- [ ] SOC2 backups configured
-- [ ] Audit reports generation
-
----
-
-# Assumptions & Scope: Hybrid-Azure-m365
-
-## What's IN Scope
-
-✓ M365 tenant creation + user provisioning  
-✓ Exchange Online implementation  
-✓ Teams + SharePoint governance  
-✓ Hybrid identity (AAD Connect)  
-✓ Azure infrastructure (VNets, VPN, backup)  
-✓ Intune device management  
-✓ Security policies (MFA, DLP, conditional access)  
-✓ User training + adoption  
-✓ Migration of files to SharePoint/OneDrive  
-✓ PowerShell automation scripts  
-
-## What's OUT of Scope
-
-✗ On-premises AD Domain Service migration (assumed existing)  
-✗ Third-party application integration (custom development)  
-✗ Legacy system decommissioning  
-✗ Physical network infrastructure changes  
-✗ Custom development for M365  
-✗ Personnel hiring/reorganization  
-
-## Key Assumptions
-
-1. **Existing Infrastructure**
-   - On-premises Active Directory already deployed (AD DS)
-   - Network connectivity between on-prem + Azure exists
-   - 1 on-premises domain controller (single instance)
-
-2. **Budget & Resources**
-   - M365 E3/E5 licenses budgeted + available
-   - Azure subscription approved + funded
-   - 3 FTE IT staff allocated
-   - Executive sponsorship confirmed
-
-3. **User Readiness**
-   - All users have generated UPNs (user@domain.com)
-   - Organizational chart documented
-   - Users willing to migrate (change management planned)
-   - Managers educated on new tools
-
-4. **Technical**
-   - 10Mbps+ internet bandwidth available
-   - VPN gateway capability in on-prem environment
-   - Domain registrar allows DNS updates (SPF/DKIM)
-   - No conflicting IP ranges (Azure VNet + on-prem)
-
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| User resistance | Adoption delays | Change management, training |
-| DCs fail during sync | Service outage | Secondary DC in Azure, failover |
-| File migration data loss | Compliance issue | Validation checksums, parallel docs |
-| Security policies too strict | User complaints | Pilot group, feedback loops |
 | Bandwidth saturation | Slow performance | Off-peak migration, throttling |
 
 ## Success Criteria

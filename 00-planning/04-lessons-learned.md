@@ -1,56 +1,46 @@
 # Lessons Learned & Post-Deployment Review
 
-_Document to complete after Phase 11 (Endpoint Management)_
+_To be completed after Phase 11 (Endpoint Management) is signed off._
+
+---
 
 ## What Went Well
 
-*To be populated after deployment*
+*Describe which phases or processes ran smoothly, where the planning proved accurate, and any tools or approaches that made the deployment easier than expected.*
 
-## What Could Improve
+---
 
-*To be populated after deployment*
+## What Could Be Improved
+
+*Describe any areas where the process was slower, harder, or more complicated than anticipated. Note what you would change if starting again.*
+
+---
 
 ## Unexpected Challenges
 
-*To be populated after deployment*
+*Document any issues that were not anticipated during planning — technical blockers, user behaviour, licensing surprises, vendor delays, etc. — and how they were resolved.*
+
+---
 
 ## Team Feedback
 
-| Team | Feedback | Resolution |
-|------|----------|-----------|
-| IT | | |
-| Users | | |
-| Management | | |
+*Summarise feedback collected from IT staff, end users, and management after go-live. What did people find confusing? What training gaps appeared? What do users wish had been communicated earlier?*
 
-## Performance Metrics
+---
 
-| Metric | Target | Actual |
-|--------|--------|--------|
-| User Adoption | 80% in 8 weeks | |
-| Uptime | 99.9% | |
-| Average Login Time | <3 sec | |
-| Support Tickets | <5/week | |
-| Security Incidents | 0 critical | |
+## Performance Against Targets
+
+| Metric | Target | Actual | Notes |
+|--------|--------|--------|-------|
+| User adoption | 95% in M365 | | |
+| Device enrolment | 95% in Intune | | |
+| M365 Secure Score | >60% | | |
+| RTO (on-prem systems) | <1 hour | | |
+| Unplanned downtime | 0 incidents | | |
+
+---
 
 ## Recommendations for Future
 
-1. Continue quarterly access reviews
-2. Update security policies annually
-3. Conduct disaster recovery drills (monthly)
-4. Plan for upgrade cycles (M365 feature updates)
-5. Schedule training refresh (annual)
+*Based on the experience of this deployment, note any recommendations for the next infrastructure project, future M365 upgrades, or ongoing operational improvements.*
 
-## Department Notes
-
-**IT Department**:  
-**Finance Department**:  
-**Sales Department**:  
-**HR Department**:  
-
-## Final Status
-
-- [ ] All phases complete
-- [ ] Users at desired proficiency
-- [ ] Systems stable + monitored
-- [ ] Documentation updated
-- [ ] Project closure approved

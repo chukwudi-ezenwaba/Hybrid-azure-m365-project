@@ -1,15 +1,7 @@
 # Phase 9: File Services and Access Control
 
-**Duration**: Weeks 17-18 | **Key Result**: Departmental file shares created with RBAC, SMB encryption enabled, access validated
-
-## Phase Overview
-
-| Item | Details |
-|------|---------|
-| What | Create file shares, configure NTFS permissions (RBAC), enable SMB encryption, test cross-department access |
-| Duration | 2 weeks |
-| Depends | Phase 5 (hybrid identity), Phase 8 (departments created in Entra ID) |
-| Success | 4+ departmental shares, 0 unauthorized access, SMB signing enforced |
+**Depends on**: Phase 6 (FS-01 VM created on Hyper-V), Phase 5 (hybrid identity syncing)  
+**Key Result**: Five departmental file shares running on FS-01, NTFS permissions scoped per AD security group, SMB encryption and signing enforced, file access audited
 
 ---
 
@@ -22,7 +14,7 @@
 1. Open **Hyper-V Manager**
 2. Right-click Host → **New** → **Virtual Machine**
 3. **Name and Location:**
-   - **Name**: FS-Primary
+   - **Name**: FS-01
    - **Location**: Default
    - Click **Next**
 
@@ -41,7 +33,7 @@
 
 7. **Connect Virtual Hard Disk:**
    - Select: **Create a new virtual hard disk**
-   - **Name**: FS-Primary.vhdx
+   - **Name**: FS-01.vhdx
    - **Location**: Default
    - **Size**: 500 GB
    - Click **Next**
@@ -55,14 +47,14 @@
 9. Review and click **Finish**
 
 **Start and configure VM:**
-- Right-click FS-Primary → **Connect**
+- Right-click FS-01 → **Connect**
 - Start the VM
 - Complete Windows Server setup (admin password, timezone, etc.)
 - Domain-join: 
   1. Right-click **This PC** → **Properties**
   2. Click **Rename this PC (advanced)**
   3. Click **Change**
-  4. Enter domain name: organization.local
+   - Enter domain name: nig-e-mart.local
   5. Enter domain admin credentials
   6. Restart
 
@@ -72,7 +64,7 @@
 
 **Via File and Storage Services:**
 
-1. RDP into file server (FS-Primary)
+1. RDP into file server (FS-01)
 2. Open **Server Manager** (automatically opens)
 3. Click **File and Storage Services** (left sidebar)
 4. Click **Shares** → **SHARES**
@@ -107,20 +99,46 @@
    - **Add permissions for**: IT Department group
    - Set:
      - Type: Allow
-     - Principal: NT AUTHORITY\Authenticated Users (initially)
-     - Permissions: Full Control
+     - Principal: `nig-e-mart\SG-IT` (the AD security group for IT staff)
+     - Permissions: **Modify**
    - Click **Apply** → **OK**
 
 7. Click **Create**
-8. Verify: Share appears in Shares list
+8. Verify: Share appears in Shares list with a lock icon indicating encryption
 
-**Repeat for other departments:**
+**Create the remaining four shares** using the same wizard process. Use exactly these values for each:
 
-Create shares for:
-- **Finance** (C:\Shares\Finance)
-- **HR** (C:\Shares\HR) - More restrictive
-- **Operations** (C:\Shares\Operations)
-- **General** (C:\Shares\General) - For all employees
+| Share Name | Folder Path | Group (Modify access) |
+|---|---|---|
+| Finance | C:\Shares\Finance | nig-e-mart\SG-Finance |
+| HR | C:\Shares\HR | nig-e-mart\SG-HR |
+| Operations | C:\Shares\Operations | nig-e-mart\SG-Operations |
+| General | C:\Shares\General | nig-e-mart\Domain Users |
+
+For each share, follow the same wizard steps: SMB Share – Quick → create the subfolder → set the share name → enable access-based enumeration and encrypt data access → customise permissions to remove Authenticated Users and add the specific group with Modify.
+
+**PowerShell shortcut** — create all five shares in one pass instead of using the GUI five times:
+
+```powershell
+# Run directly on FS-01
+$shareMap = @{
+  "IT"         = "nig-e-mart\SG-IT"
+  "Finance"    = "nig-e-mart\SG-Finance"
+  "HR"         = "nig-e-mart\SG-HR"
+  "Operations" = "nig-e-mart\SG-Operations"
+  "General"    = "nig-e-mart\Domain Users"
+}
+
+foreach ($name in $shareMap.Keys) {
+  $path = "C:\Shares\$name"
+  New-Item -ItemType Directory -Path $path -Force | Out-Null
+  New-SmbShare -Name $name -Path $path `
+    -FullAccess "nig-e-mart\Domain Admins" `
+    -ChangeAccess $shareMap[$name] `
+    -EncryptData $true -FolderEnumerationMode AccessBased
+  Write-Host "Created: \\FS-01\$name"
+}
+```
 
 ---
 
@@ -138,12 +156,11 @@ Create shares for:
 
 1. Click **Add** button
 2. **Enter the object name to select:**
-   - Type: IT Department
-   - Click **Check Names**
-   - Should resolve to domain group
+   - Type: `SG-IT`
+   - Click **Check Names** — it should resolve to `nig-e-mart\SG-IT`
    - Click **OK**
 
-3. **Permissions for "IT Department":**
+3. **Permissions for "SG-IT":**
    - ✓ Read (checked)
    - ✓ Write (checked)
    - ✓ Modify (checked)
@@ -152,14 +169,14 @@ Create shares for:
 
 4. **Add Domain Admins for full control:**
    - Click **Add**
-   - Type: Domain Admins
+   - Type: `Domain Admins`
    - Click **Check Names** → **OK**
    - Set: Full Control ✓
    - Click **Apply**
 
 5. **Remove default permissions:**
-   - Select "Everyone" or "Authenticated Users"
-   - Click **Remove**
+   - Select `CREATOR OWNER`, `Everyone`, or `Authenticated Users` if present
+   - Click **Remove** for each
    - Click **Apply**
 
 6. Click **OK** to close properties
@@ -177,7 +194,7 @@ Create shares for:
 
 1. RDP into domain controller
 2. Open **Group Policy Management** (gpmc.msc)
-3. Expand **Forest → Domains → organization.local**
+3. Expand **Forest → Domains → nig-e-mart.local**
 4. Right-click → **Create a GPO in this domain, and Link it here**
 5. **Name**: SMB-Security-Policy
 6. Click **OK**
@@ -239,10 +256,10 @@ Restart-Computer
 **From user workstation (NOT admin):**
 
 1. Open **File Explorer**
-2. In address bar, type: `\\FS-Primary\IT`
+2. In address bar, type: `\\FS-01\IT`
 3. Press Enter
 4. **If prompted for credentials:**
-   - Username: ORGANIZATION\[username]
+   - Username: `nig-e-mart\[username]`
    - Password: [domain password]
    - Check: Remember me
    - Click **OK**
@@ -272,25 +289,23 @@ Restart-Computer
 2. Right-click **HR** share → **Properties**
 
 3. **Share-level permissions:**
-   - Remove Everyone
-   - Add: HR Department (Change)
-   - Add: Domain Admins (Full Control)
-   - Do NOT add Operations, Finance, or other departments
+   - Remove `Everyone` and `Authenticated Users` if present
+   - Add: `nig-e-mart\SG-HR` — Change
+   - Add: `nig-e-mart\Domain Admins` — Full Control
+   - Do NOT add SG-Operations, SG-Finance, or any other department group
    - Click **OK**
 
 4. **NTFS permissions (via File Explorer):**
    - Navigate to: C:\Shares\HR
    - Right-click → **Properties** → **Security** → **Advanced**
-   - Remove all inherited permissions
-   - Add:
-     - HR Department: Modify
-     - Domain Admins: Full Control
+   - Click **Disable inheritance** → **Convert inherited permissions to explicit permissions**
+   - Remove all rows except `nig-e-mart\Domain Admins`
+   - Add `nig-e-mart\SG-HR` with **Modify** (applying to This folder, subfolders and files)
    - Click **Apply** → **OK**
 
 5. **Test restrictive access:**
-   - From Finance department PC, try: `\\FS-Primary\HR`
-   - Should get "Access Denied" error
-   - This is correct (HR is restricted)
+   - From a Finance department PC, open File Explorer and type: `\\FS-01\HR`
+   - Should get "Access Denied" — this is the expected and correct result
 
 ---
 
@@ -301,21 +316,21 @@ Restart-Computer
 1. Server Manager → Shares → **Finance** → **Properties**
 
 2. **Share permissions:**
-   - Add: Operations Department
+   - Add: `nig-e-mart\SG-Operations`
    - Set: **Read** (read-only)
    - Click **Apply**
 
 3. **NTFS permissions (C:\Shares\Finance):**
    - Right-click → **Properties** → **Security** → **Edit**
    - Click **Add**
-   - Type: Operations Department
+   - Type: `SG-Operations`
    - Click **OK**
    - Set: Read ✓, List Folder Contents ✓
    - Other permissions ✗ (unchecked)
    - Click **Apply** → **OK**
 
 4. **Test cross-department read access:**
-   - From Operations PC, try: `\\FS-Primary\Finance`
+   - From an Operations PC, type: `\\FS-01\Finance`
    - Should see Finance share ✓
    - Try to create a file (should fail) ✓
    - Try to read existing files (should work) ✓
@@ -360,9 +375,11 @@ Get-WinEvent -LogName Security | Where-Object {$_.ID -eq 5145} | Select-Object T
 
 ---
 
-### Step 10: Configure Backup for File Shares
+### Step 10: Configure File-Level Backup
 
-**Automated daily backup via PowerShell scheduled task:**
+Azure Site Recovery (configured in Phase 6.2) handles VM-level disaster recovery for FS-01 — if the entire VM fails, ASR can restore it within the 15-minute RPO. However, ASR restores the whole VM snapshot, not individual files. A complementary file-level backup lets you recover a single accidentally deleted document without failing over the entire machine.
+
+**Automated daily file-level backup via PowerShell scheduled task:**
 
 1. On file server, open **Notepad**
 2. Create scheduled backup script:
@@ -436,7 +453,7 @@ Write-Output "✓ Old backups cleaned up (>30 days)"
 # Creates all departmental shares with permissions
 
 $domains = @("IT", "Finance", "HR", "Operations", "General")
-$fileServerName = "FS-Primary"
+$fileServerName = "FS-01"
 $sharePath = "C:\Shares"
 
 foreach ($dept in $domains) {
@@ -452,8 +469,8 @@ foreach ($dept in $domains) {
     New-SMBShare -Name $dept `
                  -Path $deptPath `
                  -Description "$dept Department Share" `
-                 -ChangeAccess "ORGANIZATION\$dept Department" `
-                 -FullAccess "ORGANIZATION\Domain Admins" `
+                 -ChangeAccess "nig-e-mart\SG-$dept" `
+                 -FullAccess "nig-e-mart\Domain Admins" `
                  -EncryptData $true
     
     Write-Host "✓ Created share: \\$fileServerName\$dept"
@@ -464,7 +481,7 @@ foreach ($dept in $domains) {
     Set-Acl -Path $deptPath -AclObject $acl
     
     $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "ORGANIZATION\$dept Department",
+        "nig-e-mart\SG-$dept",
         "Modify",
         "ContainerInherit,ObjectInherit",
         "None",
@@ -495,7 +512,7 @@ $deptPath = "C:\Shares\Finance"
 # Grant read-only to Operations
 $acl = Get-Acl $deptPath
 $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-    "ORGANIZATION\Operations Department",
+    "nig-e-mart\SG-Operations",
     "ReadAndExecute",  # Read-only
     "ContainerInherit,ObjectInherit",
     "None",
@@ -513,7 +530,7 @@ Write-Host "✓ Operations Department now has read-only access to Finance share"
 
 | Component | Configuration |
 |-----------|---------------|
-| **File Server** | Windows Server 2022 (4GB RAM, 500GB storage) |
+| **File Server** | FS-01 — Windows Server 2022 (4 GB RAM, 500 GB storage) |
 | **Shares** | IT, Finance, HR, Operations, General |
 | **SMB Encryption** | Required (enforced via GPO) |
 | **SMB Signing** | Required (enforced via GPO) |
@@ -529,8 +546,8 @@ Write-Host "✓ Operations Department now has read-only access to Finance share"
 ## Success Checklist
 
 **Week 17:**
-- [ ] File server VM provisioned (FS-Primary)
-- [ ] File server domain-joined
+- [ ] File server VM provisioned (FS-01)
+- [ ] File server domain-joined to nig-e-mart.local
 - [ ] 5 shares created (IT, Finance, HR, Operations, General)
 - [ ] NTFS permissions configured per department
 - [ ] SMB encryption enabled

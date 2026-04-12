@@ -32,7 +32,7 @@ Get-MgDeviceManagementDeviceConfiguration
 1. Navigate to https://intune.microsoft.com (Intune admin center)
 2. Go to **Tenant Administration** → **Tenant properties**
 3. Configure:
-   - **Tenant display name**: "Contoso Corporation"
+   - **Tenant display name**: "nig-e-mart"
    - **MDM authority**: Microsoft Intune (if not already set)
    - **Mobile threat defense connector**: Microsoft Defender for Endpoint
 4. Scroll to **Endpoint protection**
@@ -204,8 +204,8 @@ Conditional Access blocks non-compliant devices from accessing corporate resourc
 
 ### Step 4.1: Create Conditional Access Policy
 
-1. Navigate to Azure AD → **Conditional Access**
-2. Click **New policy**
+1. Navigate to https://entra.microsoft.com → **Protection** → **Conditional Access**
+2. Click **+ New policy**
 3. Configure:
    - **Name**: "Block Non-Compliant Devices"
    - **Conditions**:
@@ -254,7 +254,7 @@ $policy = New-MgIdentityConditionalAccessPolicy -DisplayName "Block Non-Complian
 
 ### Step 5.1: Automatic Enrollment (Recommended)
 
-1. Go to **Azure AD** → **Devices** → **Device settings**
+1. Navigate to https://entra.microsoft.com → **Devices** → **Device settings**
 2. Configure:
    - **Users may join devices to Azure AD**: All users
    - **Additional local administrators on Azure AD joined devices**: None (restrict admin scope)
@@ -272,7 +272,7 @@ For devices not auto-enrolling:
 **Windows 10/11 Enrollment:**
 1. Open **Settings** → **Accounts** → **Access work or school**
 2. Click **Connect**
-3. Enter work email (user@organization.onmicrosoft.com)
+3. Enter work email (`user@nig-e-mart.com`)
 4. MFA challenge
 5. Device joins Azure AD and enrolls in Intune
 6. Compliance policies download and apply

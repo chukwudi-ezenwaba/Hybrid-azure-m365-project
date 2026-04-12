@@ -139,7 +139,7 @@ For infrastructure engineers managing cloud VMs:
 # Assign VM Contributor role to resource group
 $resourceGroupName = "rg-hybrid-infrastructure"
 $roleDefinitionName = "Virtual Machine Contributor"
-$principalId = (Get-AzADUser -UserPrincipalName "john.smith@organization.onmicrosoft.com").Id
+$principalId = (Get-AzADUser -UserPrincipalName "john.smith@nig-e-mart.com").Id
 
 New-AzRoleAssignment -ObjectId $principalId `
                      -RoleDefinitionName $roleDefinitionName `
@@ -153,29 +153,32 @@ For finance department managing Azure costs:
 ```powershell
 # Assign Billing Administrator at subscription scope
 $subscriptionId = "/subscriptions/{subscriptionId}"
-$principalId = (Get-AzADUser -UserPrincipalName "michael.brown@organization.onmicrosoft.com").Id
+$principalId = (Get-AzADUser -UserPrincipalName "michael.brown@nig-e-mart.com").Id
 
 New-AzRoleAssignment -ObjectId $principalId `
                      -RoleDefinitionName "Billing Reader" `
                      -Scope $subscriptionId
 ```
 
-### Step 3.3: Assign Help Desk Operator (Microsoft 365)
+### Step 3.3: Assign Help Desk Administrator (Microsoft 365)
 
 For IT support staff resetting passwords:
 
 ```powershell
-# Connect to Azure AD
-Connect-AzureAD
+# Connect to Microsoft Graph
+Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
 
-# Create Help Desk Operator role if not exists
-$roleTemplate = Get-AzureADMSRoleDefinition -Filter "DisplayName eq 'Help Desk Administrator'"
+# Get the Helpdesk Administrator role (activate it if not yet instantiated in the tenant)
+$role = Get-MgDirectoryRole -Filter "DisplayName eq 'Helpdesk Administrator'"
+if (-not $role) {
+  $roleTemplate = Get-MgDirectoryRoleTemplate | Where-Object { $_.DisplayName -eq 'Helpdesk Administrator' }
+  $role = New-MgDirectoryRole -RoleTemplateId $roleTemplate.Id
+}
 
-# Assign to support staff
-$principal = Get-AzureADUser -UserPrincipalName "lisa.wilson@organization.onmicrosoft.com"
-New-AzureADMSRoleAssignment -RoleDefinitionId $roleTemplate.Id `
-                            -PrincipalId $principal.ObjectId `
-                            -DirectoryScopeId "/"  # Tenant-wide
+# Assign the role to the support user
+$user = Get-MgUser -UserId "lisa.wilson@nig-e-mart.com"
+New-MgDirectoryRoleMember -DirectoryRoleId $role.Id `
+  -BodyParameter @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($user.Id)" }
 ```
 
 ### Step 3.4: Assignment Matrix
@@ -185,7 +188,7 @@ New-AzureADMSRoleAssignment -RoleDefinitionId $roleTemplate.Id `
 | John Smith | Subscription Owner | Subscription | Cloud architect, overall responsibility |
 | Robert Johnson | Security Administrator | Resource Group | Network security specialist |
 | Patricia Taylor | Virtual Machine Contributor | Resource Group | Database administrator |
-| Lisa Wilson | Help Desk Administrator | Tenant (M365) | Support staff password resets |
+| Lisa Wilson | Helpdesk Administrator | Tenant (M365) | Support staff password resets |
 | Michael Brown | Billing Reader | Subscription | Cost tracking and budgets |
 | Jane Doe | Intune Administrator | Tenant (M365) | Device management |
 
@@ -197,12 +200,11 @@ PIM enables just-in-time (JIT) elevated access requiring approval:
 
 ### Step 4.1: Enable PIM
 
-1. Navigate to https://portal.azure.com
-2. Search for **Privileged Identity Management**
-3. Click **Azure Resources**
-4. Click **Discover Resources**
-5. Select subscription and click **Manage as resource**
-6. Click **Activate PIM** (enables for that resource)
+1. Navigate to https://entra.microsoft.com
+2. In the left sidebar, go to **Identity Governance** → **Privileged Identity Management**
+3. Click **Azure resources** → **Discover resources**
+4. Select your subscription and click **Manage resource**
+5. PIM is now active for that subscription
 
 ### Step 4.2: Configure PIM Policies
 
@@ -223,13 +225,13 @@ PIM enables just-in-time (JIT) elevated access requiring approval:
 When infrastructure engineer needs temporary Owner access:
 
 1. Go to **Privileged Identity Management** → **My roles**
-2. Under "Eligible roles" find "Owner"
-3. Click **Activate this role**
+2. Under **Eligible roles**, find the role you need elevated access to
+3. Click **Activate**
 4. Provide justification: "Database migration maintenance window"
-5. Request sent to approvers
-6. Upon approval, user receives elevated permissions for 4 hours
-7. MFA required for sensitive operations
-8. Access automatically revokes after 4-hour window
+5. Set duration (up to the 4-hour maximum)
+6. Click **Activate** — the request is sent to the approver
+7. Upon approval, you will receive a notification and the role appears under **Active roles**
+8. Access revokes automatically when the duration expires
 
 **PowerShell Elevation Request:**
 ```powershell
@@ -252,16 +254,16 @@ Access reviews audit who has which permissions and identify orphaned accounts:
 
 ### Step 5.1: Create Access Review
 
-1. Go to **Identity Governance** → **Access Reviews**
-2. Click **New access review**
+1. Go to **Identity Governance** → **Access reviews**
+2. Click **+ New access review**
 3. Configure:
-   - **Review name**: "Q1 2026 Azure RBAC Access Review"
+   - **Review name**: `Q3 2026 Azure RBAC Access Review`
    - **Scope**: Select subscription
-   - **Review start date**: [Current date]
+   - **Review start date**: First day of the quarter
    - **Frequency**: Quarterly
    - **Auto apply recommendations**: No (manual approval)
    - **Decision makers**: Select senior engineers
-4.Create
+4. Click **Create**
 
 ### Step 5.2: Execute Access Review
 

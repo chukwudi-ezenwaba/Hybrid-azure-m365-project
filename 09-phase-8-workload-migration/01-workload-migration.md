@@ -1,228 +1,231 @@
 # Phase 8: Legacy Workload Migration to Azure
 
-## Phase Overview
-
-This phase demonstrates migration of legacy on-premises applications (HR application) to Azure infrastructure using lift-and-shift methodology, preserving existing configurations while gaining cloud benefits.
-
-**Duration**: 2 weeks  
-**Key Objectives**: Application VM migration, DNS validation, network testing, performance baselining
+**Depends on**: Phase 7 (Azure VNet and VPN active), Phase 6 (ASR vault configured)  
+**Key Result**: HR application VM running in Azure, DNS updated, users accessing the app transparently over the VPN, and on-premises server safely decommissioned
 
 ---
 
-## Task 1: Pre-Migration Assessment
+## Overview
 
-### Step 1.1: Document Current Application
-
-1. On-premises HR application server details:
-   - **Server Name**: HR-APP-01
-   - **OS**: Windows Server 2019
-   - **Application**: Custom IIS-hosted HR management system
-   - **Database**: SQL Server 2017 local instance
-   - **Storage**: 100 GB application + database
-   - **Users**: 50-100 concurrent
-   - **Performance baseline**: Document CPU, memory, network usage
-
-### Step 1.2: Network Assessment
-
-```powershell
-# Baseline current performance (on-premises server)
-Get-Counter -Counter "\Processor(_Total)\% Processor Time" -SampleInterval 5 -MaxSamples 20
-Get-Counter -Counter "\Memory\Available MBytes" -SampleInterval 5 -MaxSamples 20
-Get-Counter -Counter "\Network Interface(*)\Bytes Received/sec" -SampleInterval 5 -MaxSamples 20
-
-# Export to CSV for comparison post-migration
-```
+This phase lifts the on-premises HR application server (HR-APP-01) into Azure using a combination of Azure Site Recovery for the initial replication and a final cutover during a scheduled maintenance window. The application uses IIS to host a web front-end and a local SQL Server instance. After migration, on-premises clients reach the app over the S2S VPN without any client-side changes — only the DNS record changes.
 
 ---
 
-## Task 2: Prepare Target Azure Infrastructure
+## Step 1: Pre-Migration Assessment
 
-### Step 2.1: Configure Application Subnet
+Before moving anything, document the current server state so you have an accurate baseline to verify against post-migration.
 
-In Azure vnet-hybrid, verify subnet-application:
-```powershell
-# Verify subnet exists and has capacity
-Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $vnet -Name "subnet-application"
-
-# Should have plenty of available IPs in 10.0.2.0/24 range
-```
-
-### Step 2.2: Create Azure VM for Migrated Application
+**Capture a performance baseline from the on-premises server** (run during a typical business hour):
 
 ```powershell
-# Create VM specifications matching on-prem (or better)
-$vmName = "hr-app-azure"
-$vmSize = "Standard_D4s_v3"  # 4 vCPU, 16 GB RAM (improved from original)
-$image = "WindowsServer2019"  # Match current OS
-
-# Create VM
-$vm = New-AzVMConfig -VMName $vmName -VMSize $vmSize
-$vm = Set-AzVMOperatingSystem -VM $vm -Windows -ComputerName $vmName `
-                              -Credential (Get-Credential)
-$vm = Set-AzVMSourceImage -VM $vm -PublisherName "MicrosoftWindowsServer" `
-                          -Offer "WindowsServer" -Skus "2019-Datacenter" -Version "latest"
-$vm = Add-AzVMNetworkInterface -VM $vm -Id $nic.Id
-
-New-AzVM -ResourceGroupName $resourceGroupName -VM $vm
+# Run on HR-APP-01 directly or via PSRemoting
+$server = "HR-APP-01"
+Invoke-Command -ComputerName $server -ScriptBlock {
+  $cpu = (Get-Counter "\Processor(_Total)\% Processor Time" -SampleInterval 5 -MaxSamples 12).CounterSamples.CookedValue | Measure-Object -Average
+  $mem = (Get-Counter "\Memory\Available MBytes" -SampleInterval 5 -MaxSamples 12).CounterSamples.CookedValue | Measure-Object -Average
+  [PSCustomObject]@{
+    CPU_Avg_Pct   = [math]::Round($cpu.Average, 1)
+    MemAvail_MB   = [math]::Round($mem.Average, 0)
+    OS            = (Get-WmiObject Win32_OperatingSystem).Caption
+    DiskUsed_GB   = [math]::Round((Get-PSDrive C).Used / 1GB, 1)
+  }
+} | Format-List
 ```
+
+Record the output. Use the CPU and memory averages to size the Azure VM: if the server is running at 40% CPU on a 4-core host, a `Standard_D4s_v3` (4 vCPU, 16 GB RAM) is a comfortable match. If average CPU is below 20%, a `Standard_D2s_v3` is sufficient.
+
+Also document:
+- Current IP address: `192.168.1.50`
+- DNS name: `hr-app.nig-e-mart.local`
+- Services running: IIS (W3SVC) and SQL Server (MSSQLSERVER)
+- SQL database names: run `Get-SqlDatabase -ServerInstance HR-APP-01` and note each database name
 
 ---
 
-## Task 3: Migrate Application Data
+## Step 2: Enable ASR Replication for HR-APP-01
 
-### Step 3.1: Create Backup of On-Premises Server
+Azure Site Recovery will continuously replicate the VM's disks to Azure. This minimises down-time during cutover because the replica is kept nearly in sync. If you have not yet set up the ASR infrastructure, complete `07-phase-6-high-availability-redundancy/02-azure-site-recovery.md` first.
+
+Assuming the Recovery Services Vault and Hyper-V site are already configured, add HR-APP-01 to replication:
+
+1. In the Azure portal, go to your Recovery Services Vault → **Site Recovery** → **Replicated items** → **+ Replicate**.
+2. Set **Source**: On-Premises | **Source location**: your Hyper-V site name.
+3. **Target location**: your Azure region (e.g., Canada East).
+4. **Target resource group**: `rg-hybrid-prod`.
+5. **Target virtual network**: `vnet-hybrid` | **Subnet**: `subnet-application`.
+6. Under **Replication policy**, select `ASRPolicy-default` (15-min copy frequency).
+7. Select **HR-APP-01** from the list of VMs and click **OK** to start replication.
+
+Initial replication transfers the full disk contents and can take several hours depending on the disk size. Monitor progress under **Replicated items** — wait until the status shows **Protected** before proceeding to the cutover.
+
+---
+
+## Step 3: Prepare the Azure VM (Pre-Cutover)
+
+While ASR is replicating, configure the target Azure environment so you can act quickly during the maintenance window.
+
+**Create the NIC and confirm the target IP:**
 
 ```powershell
-# Use Windows Server Backup to create image
-wbadmin start backup -backupTarget:E: -include:C:,D: -allCritical -quiet
+Connect-AzAccount
+$rg        = "rg-hybrid-prod"
+$vnet      = Get-AzVirtualNetwork -ResourceGroupName $rg -Name "vnet-hybrid"
+$subnet    = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $vnet -Name "subnet-application"
 
-# Or use third-party imaging tool (Acronis, Veeam, etc.)
+# Reserve a static private IP for the migrated VM so DNS is predictable
+$nicName   = "hr-app-azure-nic"
+$privateIP = "10.0.2.50"
+
+$nic = New-AzNetworkInterface `
+  -Name $nicName `
+  -ResourceGroupName $rg `
+  -Location "canadaeast" `
+  -SubnetId $subnet.Id `
+  -PrivateIpAddress $privateIP
 ```
 
-### Step 3.2: Copy Application Files to Azure
+Do not assign a public IP. The VM is only accessible from on-premises over the VPN.
 
-Option 1: **VPN + File Share**
-```powershell
-# From on-premises, copy via file share over VPN
-Copy-Item -Path "E:\HR-APP" `
-          -Destination "\\hr-app-azure\c$\HR-APP" `
-          -Recurse -Force `
-          -Credential (Get-Credential AZURE\azureuser)
-
-# Verify files copied
-Get-ChildItem -Path "\\hr-app-azure\c$\HR-APP" -Recurse
-```
-
-Option 2: **Azure Storage Account blob upload**
-```powershell
-# Upload to Azure Storage (for very large transfers)
-$storageAccount = Get-AzStorageAccount -ResourceGroupName $resourceGroupName -Name "stgmigration"
-
-# Create container
-New-AzStorageContainer -Name "hr-app-backup" -Context $storageAccount.Context
-
-# Upload VHD or backup files
-Set-AzStorageBlobContent -File "C:\Backups\hr-app-image.vhd" `
-                         -Container "hr-app-backup" `
-                         -Blob "hr-app-image.vhd" `
-                         -Context $storageAccount.Context
-```
-
-### Step 3.3: Restore Application and Database
+**Create a Network Security Group for the application tier:**
 
 ```powershell
-# RDP to Azure VM
-# Install IIS and SQL Server
-# Restore database from backup
-# Restore application files
+$nsgName = "nsg-hr-app"
+$nsg = New-AzNetworkSecurityGroup -Name $nsgName -ResourceGroupName $rg -Location "canadaeast"
 
-# Test application locally (localhost)
-Start-Process "http://localhost:8080"
+# Allow inbound traffic on IIS port 8080 from on-prem subnet only
+Add-AzNetworkSecurityRuleConfig -NetworkSecurityGroup $nsg `
+  -Name "Allow-HTTP-OnPrem" `
+  -Protocol Tcp -Direction Inbound -Priority 100 `
+  -SourceAddressPrefix "192.168.1.0/24" -SourcePortRange "*" `
+  -DestinationAddressPrefix "*" -DestinationPortRange "8080" `
+  -Access Allow | Set-AzNetworkSecurityGroup
+
+# Attach the NSG to the NIC
+$nic.NetworkSecurityGroup = $nsg
+$nic | Set-AzNetworkInterface
 ```
 
 ---
 
-## Task 4: Update DNS and Network Configuration
+## Step 4: Perform the Cutover
 
-### Step 4.1: Update DNS Record
+Schedule a maintenance window (e.g., Friday 10 PM – 2 AM). Notify affected users in advance.
+
+**At the start of the maintenance window:**
+
+1. In the Azure portal, go to the Recovery Services Vault → **Replicated items** → click **HR-APP-01**.
+2. Click **Failover** → **Test Failover** first (using an isolated test network) to confirm the VM boots and IIS responds inside Azure. If the test failover succeeds, clean it up by clicking **Cleanup test failover**.
+3. Click **Failover** (not test) → select the latest recovery point → uncheck **Shut down machine before beginning failover** (you will do this manually in the next step).
+
+**On the on-premises server, gracefully stop the application:**
 
 ```powershell
-# On-premises HR app was: hr-app.contoso.local -> 192.168.1.50
-# Update to Azure VM private IP: 10.0.2.100
+# Run on HR-APP-01
+Stop-Service -Name "W3SVC"   # Stop IIS
+Stop-Service -Name "MSSQLSERVER"  # Stop SQL Server
+# Wait 2 minutes for in-flight transactions to complete, then:
+Shutdown-Computer -ComputerName HR-APP-01 -Force
+```
 
-# In on-premises DNS (on primary DC)
+4. Back in the Azure portal, confirm the failover and wait for the VM to start in Azure. It will use the most recent replication snapshot — taken within the last 15 minutes.
+5. Once the VM is running, connect via RDP through the Bastion host (or a jump box) and verify IIS and SQL Server started automatically. Run a quick database query to confirm data integrity.
+
+---
+
+## Step 5: Update DNS
+
+Once the Azure VM is confirmed working, redirect the DNS entry so clients resolve `hr-app.nig-e-mart.local` to the new Azure private IP:
+
+```powershell
+# Run on the primary on-premises domain controller
 $dnsServer = "192.168.1.10"
+$zone      = "nig-e-mart.local"
+
+# Remove the old record pointing to the on-premises server
 Remove-DnsServerResourceRecord -ComputerName $dnsServer `
-                               -ZoneName "contoso.local" `
-                               -Name "hr-app" -RecordType "A" -Force
+  -ZoneName $zone -Name "hr-app" -RRType "A" -Force
 
+# Add the new record pointing to the Azure VM
 Add-DnsServerResourceRecordA -ComputerName $dnsServer `
-                             -ZoneName "contoso.local" `
-                             -Name "hr-app" `
-                             -IPv4Address "10.0.2.100"
+  -ZoneName $zone -Name "hr-app" -IPv4Address "10.0.2.50"
 
-# Verify DNS resolves to Azure
-nslookup hr-app.contoso.local
-# Should return: 10.0.2.100
+# Confirm resolution from an on-premises client
+Resolve-DnsName "hr-app.nig-e-mart.local" -Server $dnsServer
+# Expected output: 10.0.2.50
 ```
 
-### Step 4.2: Configure Application for New Location
+DNS changes propagate to on-premises clients based on the zone's TTL (default 1 hour). Clients that have the old IP cached can be flushed manually with `ipconfig /flushdns`.
+
+---
+
+## Step 6: Post-Cutover Validation
+
+Run a structured validation before declaring the migration complete:
 
 ```powershell
-# In application config files, update:
-# - Database connection: new IP or compute name
-# - File paths: if changed
-# - Service endpoints: if changed
-
-# Restart application services
-Restart-Service -Name "W3SVC"  # IIS
-Restart-Service -Name "MSSQL*"  # SQL Server
+# From an on-premises client machine
+$appUrl = "http://hr-app.nig-e-mart.local:8080"
+$response = Invoke-WebRequest -Uri $appUrl -UseDefaultCredentials
+Write-Output "HTTP Status: $($response.StatusCode)"
+# Expected: 200
 ```
+
+Also complete the following user acceptance tests manually:
+
+1. Log in to the HR application with a standard user account — confirm the login screen loads and authentication succeeds.
+2. Create a test employee record and save it. Confirm the record persists after a browser refresh.
+3. Run a report or search query that hits the database. Confirm the results match what was visible on the old system.
+4. Upload a document if the application supports it. Confirm the file is stored and retrievable.
+
+If any test fails, the on-premises server is still shut down but intact. You can fail back to it by running an ASR failback from the Azure portal while you diagnose the issue — do not decommission until all tests pass.
 
 ---
 
-## Task 5: Test and Validate Migration
+## Step 7: Decommission the On-Premises Server
 
-### Step 5.1: Connectivity Test
+After at least 7 days of stable operation in Azure with no user-reported issues, decommission HR-APP-01.
+
+**Day 1 (immediately post-cutover):** Confirm the server is powered off. Leave it in this state as a safety net.
+
+**Day 7:** Verify no users or services are still trying to connect to the old IP (`192.168.1.50`). Check firewall logs and DNS query logs for any traffic to that address.
+
+**Day 30:** If no issues have been reported:
 
 ```powershell
-# From on-premises client, access migrated application
-$appUrl = "http://hr-app.contoso.local:8080"
-Invoke-WebRequest -Uri $appUrl
+# Remove the VM from Active Directory
+Remove-ADComputer -Identity "HR-APP-01" -Confirm:$false
 
-# Expected: HTTP 200, application responsive
+# Update the asset inventory spreadsheet — mark HR-APP-01 as decommissioned
+# If it is a physical server, coordinate with facilities for hardware removal or reuse
+# If it is a Hyper-V VM, remove it from the Hyper-V host:
+Remove-VM -Name "HR-APP-01" -Force -ComputerName "HVHOST-01"
 ```
 
-### Step 5.2: Application Functionality Test
+Remove the ASR replication item from the Recovery Services Vault:
 
-User acceptance testing (UAT):
-- [ ] Application loads without errors
-- [ ] Can login with test credentials  
-- [ ] Can create/edit/delete records
-- [ ] Reports generate correctly
-- [ ] File uploads work
-- [ ] Database queries responsive
+1. Azure portal → Recovery Services Vault → **Replicated items** → **HR-APP-01**.
+2. Click **Disable replication** → confirm. This stops billing for the replication storage.
 
-### Step 5.3: Performance Comparison
-
-```powershell
-# During peak usage, compare metrics:
-# Metric | On-Premises | Azure
-# CPU    | 40%        | 25%  (improved)
-# Memory | 70%        | 50%  (improved)
-# Network| 100 Mbps   | 50 Mbps (reduced bandwidth = cost savings)
-
-# Conclusion: Azure VM performing better with increased resources
-```
+Finally, update the DNS zone to remove any lingering records that pointed to the old server, and update the project asset register to reflect the new VM location.
 
 ---
 
-## Task 6: Decommission On-Premises Server
+## Completion Checklist
 
-After successful migration and UAT sign-off:
-
-1. **Backup**: Final full backup of old server
-2. **Disconnect**: Remove from network
-3. **Decommission**: Mark for removal after 30-day retention
-4. **Document**: Update asset inventory
-5. **Reclaim**: Return hardware or repurpose
-
----
-
-## Validation Checklist
-
-- [ ] Azure VM deployed and configured
-- [ ] Application files migrated
-- [ ] Database restored and validated
-- [ ] DNS records updated (resolves to Azure)
-- [ ] VPN connectivity confirmed
-- [ ] Application accessible from on-premises
-- [ ] UAT passed (100% test cases passing)
-- [ ] Performance baseline established
-- [ ] Backup procedures tested
-- [ ] on-premises server decommissioned or repurposed
+- Performance baseline captured from the on-premises server before migration
+- ASR replication enabled and status reached **Protected** before cutover
+- Test failover completed and cleaned up successfully
+- Maintenance window cutover executed: on-prem server shut down, Azure VM confirmed healthy
+- IIS and SQL Server confirmed running in Azure after cutover
+- DNS record updated to `10.0.2.50` and verified resolving correctly
+- All user acceptance tests passed (login, CRUD operations, reports, file upload)
+- Seven-day stability period observed with no issues
+- On-premises VM removed from Hyper-V and AD after 30-day hold
+- ASR replication item disabled after decommission
 
 ---
 
-*Phase 8 Completion Date: ___________*
-*Document Version: 1.0*
+## Next Step
+
+Proceed to [Phase 9 – File Services & Access](../10-phase-9-file-services-access/01-file-services-access.md).
+
