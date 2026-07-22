@@ -2,7 +2,7 @@
 
 ## Phase Overview
 
-This phase establishes secure hybrid connectivity between on-premises and Azure infrastructure using Site-to-Site VPN, configures network segmentation, and implements disaster recovery infrastructure.
+This phase sets up secure hybrid connectivity between on-premises and Azure. It uses Site-to-Site VPN, network segmentation, and disaster recovery infrastructure.
 
 **Duration**: 3 weeks  
 **Key Objectives**: VPN Gateway configuration, Site-to-Site VPN establishment, network connectivity validation

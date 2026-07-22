@@ -2,7 +2,7 @@
 
 ## Phase Overview
 
-This phase implements granular role-based access control across Azure and Microsoft 365 enforcing least privilege principle—users receive only permissions required for job functions, never administrative access beyond scope.
+This phase sets up role-based access control in Azure and Microsoft 365. It uses least privilege. Users get only the permissions they need for their job.
 
 **Duration**: 2 weeks  
 **Key Objectives**: RBAC implementation, PIM configuration, audit trail establishment, access review procedures

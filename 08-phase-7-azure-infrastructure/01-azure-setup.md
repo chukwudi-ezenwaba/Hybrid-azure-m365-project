@@ -7,7 +7,7 @@
 
 ## Overview
 
-This phase configures the on-premises Hyper-V VMs — the HR application server (HR-APP-01) and the file server (FS-01) — so that users can log into both using their existing Active Directory credentials with no separate password. It also locks down the file server's SMB configuration and enables object-level file access auditing. VM-level disaster recovery for both servers is handled by Azure Site Recovery (configured in Phase 6.2).
+This phase sets up the on-premises Hyper-V VMs. The HR application server and the file server use the existing Active Directory credentials. The file server also uses a locked-down SMB configuration and object-level file access auditing. Azure Site Recovery covers disaster recovery for both servers (see Phase 6.2).
 
 ---
 

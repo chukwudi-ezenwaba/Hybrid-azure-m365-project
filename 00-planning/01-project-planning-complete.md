@@ -2,13 +2,13 @@
 
 ## What This Project Is
 
-nig-e-mart is a growing startup that needs to modernise its IT infrastructure without abandoning on-premises control of its core systems. This project delivers a hybrid cloud environment that connects the existing on-premises Active Directory and Hyper-V workloads to Microsoft 365 and Azure. The end result is a unified identity system where users sign in once and access both local and cloud resources seamlessly, a fully governed Microsoft 365 deployment for email, collaboration, and file management, and an Azure-backed redundancy layer that keeps critical systems available even if the on-premises environment goes offline.
+nig-e-mart is a growing startup. It needs to modernize its IT infrastructure. It also needs to keep control of its core on-premises systems. This project delivers a hybrid cloud environment. It connects on-premises Active Directory and Hyper-V workloads to Microsoft 365 and Azure. Users can sign in once and use both local and cloud resources. The deployment also gives email, collaboration, file management, and backup for critical systems.
 
 ---
 
 ## Scope
 
-The project covers eleven implementation phases, each building on the previous one. It begins with provisioning the Microsoft 365 tenant and migrating users, then layers on security hardening, hybrid identity synchronisation, Azure infrastructure, high availability through Azure Site Recovery, file services, role-based access controls, and finally endpoint management through Intune.
+The project has eleven implementation phases. Each phase builds on the one before it. It starts with the Microsoft 365 tenant and user migration. It then adds security, hybrid identity, Azure infrastructure, high availability, file services, role-based access controls, and endpoint management.
 
 What is not in scope: changes to physical network infrastructure, decommissioning of legacy systems, third-party application integrations, custom development work, or personnel changes. The on-premises Active Directory is assumed to already exist and be healthy.
 

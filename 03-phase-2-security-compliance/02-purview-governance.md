@@ -7,7 +7,7 @@
 
 ## Overview
 
-Microsoft Purview provides data governance, compliance, and risk management across Microsoft 365 workloads. This guide covers:
+Microsoft Purview provides data governance, compliance, and risk management across Microsoft 365 workloads. This guide shows:
 
 1. Enabling unified audit logging
 2. Sensitivity labels (classification)

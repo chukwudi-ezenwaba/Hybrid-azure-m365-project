@@ -7,7 +7,7 @@
 
 ## Overview
 
-All user accounts originate in on-premises Active Directory and sync to Entra ID via Azure AD Connect. This file documents the end-to-end lifecycle: new hire onboarding, transfers, offboarding, and guest management.
+All user accounts start in on-premises Active Directory. They sync to Entra ID through Azure AD Connect. This file shows the full lifecycle: new hire onboarding, transfers, offboarding, and guest management.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## For This Deployment
 
-This guide covers security practices specific to this Hybrid-Azure-m365 project.
+This guide shows security practices for this Hybrid-Azure-m365 project.
 
 ## Password & Authentication
 

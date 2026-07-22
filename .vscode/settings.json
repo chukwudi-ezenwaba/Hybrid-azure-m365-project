@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /d \"c:/Users/Franklin/OneDrive - George Brown College/Document/IT Files/GitHub Projects/Projects/Hybrid-Azure-m365-project\"; python -c \"import glob, os; files=sorted\\(glob\\.glob\\('\\*\\*/\\*\\.md', recursive=True\\)\\); print\\('count', len\\(files\\)\\); print\\('\\\\n'\\.join\\(files\\)\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

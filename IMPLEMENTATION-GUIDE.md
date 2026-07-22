@@ -6,6 +6,7 @@
 
 ## Table of Contents
 
+0. [Recommended Sequence](DOCUMENTATION-IMPLEMENTATION-SEQUENCE.md)
 1. [Planning Phase](#planning-phase)
 2. [Phase 1: Microsoft 365 Foundation](#phase-1-microsoft-365-foundation)
 3. [Phase 2: Security Hardening](#phase-2-security-hardening)
@@ -21,7 +22,7 @@
 
 ### Concept: Why Start with Planning?
 
-A failed deployment often results from poor planning, not poor execution. This phase establishes:
+Poor planning often causes a failed deployment. This phase sets up:
 - **Clear success criteria** (how will you know it worked?)
 - **Resource allocation** (who does what, when?)
 - **Risk mitigation** (what could go wrong?)
@@ -29,7 +30,7 @@ A failed deployment often results from poor planning, not poor execution. This p
 
 ### Pre-Deployment Checklist
 
-Before executing ANY phases, verify:
+Before you start, check:
 
 #### Budget & Licensing
 ```

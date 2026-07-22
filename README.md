@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This project documents the design and deployment of a secure, scalable, and governance-driven hybrid infrastructure for **nig-e-mart**, a startup modernizing its IT operations while maintaining control of critical on-premises systems.
+This project shows a secure and scalable hybrid infrastructure for **nig-e-mart**. The company is modernizing its IT operations. It keeps control of key on-premises systems.
 
-The architecture integrates:
+The design includes:
 
 - On-premises Active Directory Domain Services (AD DS)
 - Hyper-V virtualization hosting internal workloads
@@ -19,13 +19,19 @@ The architecture integrates:
 - Hybrid identity synchronization
 - Zero Trust security model implementation
 
-This solution balances operational control, cloud agility, compliance enforcement, and business continuity.
+This solution gives control, cloud access, compliance, and business continuity.
+
+---
+
+## Recommended Documentation Order
+
+For the recommended implementation sequence, start with [DOCUMENTATION-IMPLEMENTATION-SEQUENCE.md](DOCUMENTATION-IMPLEMENTATION-SEQUENCE.md).
 
 ---
 
 # Business Objectives
 
-nig-e-mart requires an infrastructure that:
+nig-e-mart needs an infrastructure that:
 
 - Maintains on-premises control of core identity and file services
 - Enables secure cloud productivity (Exchange, OneDrive, SharePoint)
@@ -39,7 +45,7 @@ nig-e-mart requires an infrastructure that:
 
 # Architecture Overview
 
-The environment follows a layered hybrid enterprise architecture integrating:
+The environment uses a layered hybrid architecture:
 
 - On-prem identity & virtualization
 - Microsoft 365 cloud services

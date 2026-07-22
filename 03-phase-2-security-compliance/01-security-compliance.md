@@ -2,7 +2,7 @@
 
 ## Phase Overview
 
-This phase implements Microsoft 365 defense-in-depth security architecture protecting against external threats, insider risks, and data loss. Zero Trust principles are enforced through multi-layer threat protection, data classification, and comprehensive audit logging.
+This phase sets up Microsoft 365 security controls. It helps protect against external threats, insider risk, and data loss. It also uses Zero Trust principles with threat protection, data classification, and audit logging.
 
 **Duration**: 2 weeks  
 **Key Objectives**: Defender configuration, DLP policies, message encryption, insider risk management, audit logging
