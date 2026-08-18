@@ -9,7 +9,7 @@
 
 Microsoft 365 E3 and E5 both include Exchange Online, SharePoint, Teams, OneDrive, and Intune. The difference is in security depth. E5 adds Microsoft Defender for Office 365 Plan 2, Entra ID Premium P2 (required for PIM and risk-based Conditional Access), and advanced Purview compliance features. Assigning E5 only where it is needed keeps licensing costs under control while ensuring the highest-risk users have the strongest protections.
 
-For nig-e-mart, the assignment strategy is:
+For cademart, the assignment strategy is:
 - **E5**: IT staff, Finance department, HR department, and Executives — these roles handle sensitive data or have elevated system access
 - **E3**: Sales, Marketing, and general office staff
 

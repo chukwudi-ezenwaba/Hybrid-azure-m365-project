@@ -7,8 +7,7 @@
 
 ## Step 1: Create the Microsoft 365 Tenant
 
-To create a Microsoft 365 E3 account, first create a new Microsoft account by visiting **https://signup.live.com** or **https://account.microsoft.com**. Next, access the Microsoft 365 Enterprise plans at **https://www.microsoft.com/en-ca/microsoft-365/enterprise/microsoft-365-plans-and-pricing** and select the Microsoft 365 E3 plan. I have created custom domain cademart.shop, then complete the Microsoft 365 E3 tenant setup using that custom domain. Finally, add our billing information and configure Multi-Factor Authentication (MFA) to secure the account.
-
+Go to https://admin.microsoft.com and sign up for a Microsoft 365 business plan. During sign-up you will be asked to create an initial domain in the format `yourorg.onmicrosoft.com` — this is your permanent fallback domain and cannot be changed later, so choose the organisation name carefully. You will also create the first Global Administrator account during this step. Use a dedicated admin account with a format like `admin@yourorg.onmicrosoft.com` rather than a personal user account.
 
 Once sign-up is complete, sign in to the Microsoft 365 admin centre at https://admin.microsoft.com and confirm the tenant is active.
 
@@ -16,11 +15,15 @@ Once sign-up is complete, sign in to the Microsoft 365 admin centre at https://a
 
 ## Step 2: Add and Verify Your Custom Domain
 
-cademart should use its own domain rather than the `.onmicrosoft.com` address for user-facing email and sign-in.
+nig-e-mart should use its own domain (e.g. `nig-e-mart.com`) rather than the `.onmicrosoft.com` address for user-facing email and sign-in.
 
 1. In the admin centre, go to **Settings** → **Domains** → **Add domain**.
 2. Enter your domain name and click **Use this domain**.
-3.  Log in to your DNS registrar (GoDaddy) and Microsoft will provision the connection automatically.
+3. Microsoft will display a TXT record, for example:  
+   `MS=ms12345678`  
+   Log in to your DNS registrar (e.g. Cloudflare, GoDaddy, Namecheap) and add this as a TXT record on the root of the domain (`@`). DNS propagation typically takes 5–30 minutes.
+4. Return to the admin centre and click **Verify**. Once verified, Microsoft will show a list of additional DNS records needed for email (MX, CNAME, SPF). Add all of them at your registrar.
+5. After adding all DNS records, click **Continue** to finish the domain setup. The domain status will change to **Healthy**.
 
 ---
 

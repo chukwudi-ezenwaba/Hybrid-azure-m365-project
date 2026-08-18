@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This project shows a secure and scalable hybrid infrastructure for **nig-e-mart**. The company is modernizing its IT operations. It keeps control of key on-premises systems.
+This project shows a secure and scalable hybrid infrastructure for **cademart**. The company is modernizing its IT operations. It keeps control of key on-premises systems.
 
 The design includes:
 
